@@ -7,7 +7,8 @@ from users.views import RegisterView, ProfileView, LoginView, BroadcastEmailView
 from courses.views import (
     DashboardView, CourseDetailView, FreeTrialLessonsView, SaveProgressView, 
     ChatBotView, NoteView, GameScoreView, ResetPasswordView, AdminPaymentsView,
-    AraigoguChatView, AraigoguHistoryView, AraigoguSessionDetailView
+    AraigoguChatView, AraigoguHistoryView, AraigoguSessionDetailView,
+    SendRenewalRemindersView
 )
 from quizzes.views import QuizDetailView, SubmitQuizView
 from payments.views import UploadSlipView
@@ -56,6 +57,7 @@ urlpatterns = [
     path('api/payments/upload-slip/', UploadSlipView.as_view(), name='api_upload_slip'),
     path('api/admin/payments/', AdminPaymentsView.as_view(), name='api_admin_payments'),
     path('api/admin/broadcast-email/', BroadcastEmailView.as_view(), name='api_admin_broadcast_email'),
+    path('api/admin/send-renewal-reminders/', SendRenewalRemindersView.as_view(), name='api_admin_send_renewal_reminders'),
 
     # ── RyuCommunity Forum APIs ──────────────────────────
     path('api/community/', include('community.urls')),

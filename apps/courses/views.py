@@ -787,3 +787,64 @@ class AraigoguSessionDetailView(APIView):
             return Response({'error': 'ไม่พบประวัติสนทนา'}, status=status.HTTP_404_NOT_FOUND)
 
 
+class SendRenewalRemindersView(APIView):
+    """
+    Admin API endpoint to trigger course renewal reminder emails.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        from datetime import date
+        from .emails import send_course_renewal_reminder_email
+
+        data = request.data or {}
+        enrollment_ids = data.get('enrollment_ids', [])
+        days_remaining = data.get('days_remaining', None)
+        include_expired = data.get('include_expired', False)
+
+        today = date.today()
+
+        if enrollment_ids:
+            enrollments = Enrollment.objects.filter(
+                id__in=enrollment_ids,
+                is_lifetime_video=False
+            ).select_related('user', 'course')
+        else:
+            enrollments = Enrollment.objects.filter(
+                is_lifetime_video=False,
+                video_expires_at__isnull=False
+            ).select_related('user', 'course')
+
+        sent_count = 0
+        failed_count = 0
+
+        for enrollment in enrollments:
+            expires_at = enrollment.video_expires_at
+            days_until_exp = (expires_at - today).days if expires_at else None
+
+            should_send = False
+            if enrollment_ids:
+                should_send = True
+            elif days_remaining is not None and days_until_exp == int(days_remaining):
+                should_send = True
+            elif include_expired and days_until_exp is not None and -30 <= days_until_exp < 0:
+                should_send = True
+
+            if should_send:
+                ok = send_course_renewal_reminder_email(enrollment, days_remaining=days_until_exp)
+                if ok:
+                    sent_count += 1
+                else:
+                    failed_count += 1
+
+        return Response({
+            'message': f'ประมวลผลการส่งอีเมลเตือนต่ออายุเรียบร้อยแล้ว (สำเร็จ {sent_count} รายการ, ล้มเหลว {failed_count} รายการ)',
+            'sent_count': sent_count,
+            'failed_count': failed_count
+        })
+
+
+

@@ -1,5 +1,7 @@
 from django.contrib import admin
+from django.contrib import messages
 from .models import Course, Module, Lesson, Enrollment, Progress, Note, GameScore
+from .emails import send_course_renewal_reminder_email
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
@@ -25,6 +27,33 @@ class EnrollmentAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'course', 'status', 'is_active', 'is_lifetime_video', 'video_expires_at')
     list_filter = ('course', 'status', 'is_active', 'is_lifetime_video')
     search_fields = ('user__email', 'user__name', 'course__title')
+    actions = ['send_renewal_reminder_action']
+
+    @admin.action(description="📧 ส่งอีเมลเตือนต่ออายุคอร์สเรียน (Renewal Reminder)")
+    def send_renewal_reminder_action(self, request, queryset):
+        success_count = 0
+        fail_count = 0
+        for enrollment in queryset:
+            if enrollment.is_lifetime_video:
+                continue
+            ok = send_course_renewal_reminder_email(enrollment)
+            if ok:
+                success_count += 1
+            else:
+                fail_count += 1
+        
+        if success_count > 0:
+            self.message_user(
+                request, 
+                f"ส่งอีเมลเตือนต่ออายุสำเร็จ {success_count} รายการ", 
+                level=messages.SUCCESS
+            )
+        if fail_count > 0:
+            self.message_user(
+                request, 
+                f"ส่งอีเมลล้มเหลว {fail_count} รายการ", 
+                level=messages.ERROR
+            )
 
 @admin.register(Progress)
 class ProgressAdmin(admin.ModelAdmin):
