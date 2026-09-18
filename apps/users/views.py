@@ -15,36 +15,41 @@ from courses.models import Course, Enrollment
 
 class LoginView(APIView):
     def post(self, request):
-        email = request.data.get('email') or request.data.get('username')
-        password = request.data.get('password')
-
-        if not email or not password:
-            return Response({'detail': 'กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วนครับ'}, status=status.HTTP_400_BAD_REQUEST)
-
-        email_clean = str(email).strip().lower()
         try:
-            user = User.objects.get(email__iexact=email_clean)
-        except User.DoesNotExist:
-            return Response({'detail': 'อีเมลหรือรหัสผ่านไม่ถูกต้องครับ'}, status=status.HTTP_400_BAD_REQUEST)
+            email = request.data.get('email') or request.data.get('username')
+            password = request.data.get('password')
 
-        if not user.check_password(password):
-            return Response({'detail': 'อีเมลหรือรหัสผ่านไม่ถูกต้องครับ'}, status=status.HTTP_400_BAD_REQUEST)
+            if not email or not password:
+                return Response({'detail': 'กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วนครับ'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not user.is_active:
-            return Response({'detail': 'บัญชีผู้ใช้นี้ถูกระงับการใช้งาน'}, status=status.HTTP_400_BAD_REQUEST)
+            email_clean = str(email).strip().lower()
+            try:
+                user = User.objects.get(email__iexact=email_clean)
+            except User.DoesNotExist:
+                return Response({'detail': 'อีเมลหรือรหัสผ่านไม่ถูกต้องครับ'}, status=status.HTTP_400_BAD_REQUEST)
 
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-            'user': {
-                'id': user.id,
-                'email': user.email,
-                'name': user.name,
-                'role': user.role,
-                'nickname': user.nickname,
-            }
-        }, status=status.HTTP_200_OK)
+            if not user.check_password(password):
+                return Response({'detail': 'อีเมลหรือรหัสผ่านไม่ถูกต้องครับ'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if not user.is_active:
+                return Response({'detail': 'บัญชีผู้ใช้นี้ถูกระงับการใช้งาน'}, status=status.HTTP_400_BAD_REQUEST)
+
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user': {
+                    'id': user.id,
+                    'email': user.email,
+                    'name': user.name,
+                    'role': user.role,
+                    'nickname': user.nickname,
+                }
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({'detail': f'เกิดข้อผิดพลาดทางเทคนิคที่เซิร์ฟเวอร์: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class RegisterView(APIView):
     @transaction.atomic

@@ -16,6 +16,9 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 COPY . .
 
+# Collect static files for Django Admin UI
+RUN python manage.py collectstatic --noinput || true
+
 EXPOSE 8000
 
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "config.wsgi:application"]
