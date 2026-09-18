@@ -63,8 +63,8 @@ class User(AbstractUser):
         # Try legacy PHP bcrypt check
         h = self.password
         if h and (h.startswith('$2y$') or h.startswith('$2a$') or h.startswith('$2b$')):
-            import bcrypt
             try:
+                import bcrypt
                 h_mod = h
                 if h_mod.startswith('$2y$'):
                     h_mod = h_mod.replace('$2y$', '$2a$', 1)
