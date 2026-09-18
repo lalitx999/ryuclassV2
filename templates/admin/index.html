@@ -1,0 +1,21 @@
+{% extends "admin/base_site.html" %}
+{% load i18n ryu_admin log %}
+{% block bodyclass %}{{ block.super }} ryu-dashboard{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content %}
+<div class="ryu-page-heading"><div><p class="ryu-eyebrow">RYUCLASS / WORKSPACE</p><h1>ภาพรวมการจัดการ</h1><p>ดูแลนักเรียน จัดการคอร์ส และติดตามงานของคุณในที่เดียว</p></div><span class="ryu-date">{% now "j M Y" %}</span></div>
+<div class="ryu-quick-grid">
+{% for app in app_list %}{% for model in app.models %}{% if model.admin_url %}
+{% if model.object_name == 'Payment' %}<a class="ryu-quick ryu-quick-primary" href="{{ model.admin_url }}?status__exact=pending"><span class="ryu-quick-icon" aria-hidden="true">↗</span><span class="ryu-quick-title">ตรวจสอบการชำระเงิน</span><span>เปิดรายการที่รอตรวจสอบ</span><span class="ryu-quick-arrow" aria-hidden="true">→</span></a>{% endif %}
+{% if model.object_name == 'User' %}<a class="ryu-quick" href="{{ model.admin_url }}"><span class="ryu-quick-icon" aria-hidden="true">◎</span><span class="ryu-quick-title">นักเรียนและสมาชิก</span><span>ค้นหาและดูแลข้อมูลสมาชิก</span><span class="ryu-quick-arrow" aria-hidden="true">→</span></a>{% endif %}
+{% if model.object_name == 'Course' %}<a class="ryu-quick" href="{{ model.admin_url }}"><span class="ryu-quick-icon" aria-hidden="true">▤</span><span class="ryu-quick-title">จัดการคอร์สเรียน</span><span>เนื้อหา ราคา และสถานะคอร์ส</span><span class="ryu-quick-arrow" aria-hidden="true">→</span></a>{% endif %}
+{% endif %}{% endfor %}{% endfor %}
+</div>
+<div class="ryu-workspace-grid"><section><div class="ryu-section-heading"><h2>ส่วนจัดการทั้งหมด</h2><span>เลือกงานที่ต้องการทำ</span></div>
+<div class="ryu-module-grid">{% for app in app_list %}
+<section class="ryu-module"><div class="ryu-module-heading"><h3><a href="{{ app.app_url }}">{{ app|app_label }}</a></h3><span>{{ app.models|length }}</span></div>
+<ul>{% for model in app.models %}<li><span>{% if model.admin_url %}<a href="{{ model.admin_url }}">{{ model|model_label }} <span class="ryu-row-arrow" aria-hidden="true">↗</span></a>{% else %}{{ model|model_label }}{% endif %}</span>{% if model.add_url %}<a class="ryu-add" href="{{ model.add_url }}" aria-label="เพิ่ม {{ model|model_label }}">＋ เพิ่ม</a>{% endif %}</li>{% endfor %}</ul>
+</section>{% empty %}<p>คุณยังไม่มีสิทธิ์เข้าถึงข้อมูล กรุณาติดต่อผู้ดูแลระบบ</p>{% endfor %}</div></section>
+<aside class="ryu-activity"><h2>กิจกรรมล่าสุดของคุณ</h2><p class="ryu-muted">ประวัติการเปลี่ยนแปลงข้อมูล</p>{% get_admin_log 8 as admin_log for_user user %}<ul>{% for entry in admin_log %}<li><span class="ryu-activity-dot" aria-hidden="true"></span><div>{% if entry.is_deletion or not entry.get_admin_url %}<span>{{ entry.object_repr }}</span>{% else %}<a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>{% endif %}<small>{% if entry.is_addition %}เพิ่มข้อมูล{% elif entry.is_deletion %}ลบข้อมูล{% else %}แก้ไขข้อมูล{% endif %} · {{ entry.action_time|date:"j M H:i" }}</small></div></li>{% empty %}<li class="ryu-empty">ยังไม่มีกิจกรรม<br><small>รายการที่คุณเพิ่มหรือแก้ไขจะแสดงที่นี่</small></li>{% endfor %}</ul></aside>
+</div>
+{% endblock %}

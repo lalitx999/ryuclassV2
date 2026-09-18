@@ -1,0 +1,9 @@
+{% extends "admin/base.html" %}
+{% load static %}
+{# Extend Django's original template so forms, media, popup and accessibility hooks survive. #}
+{% block dark-mode-vars %}{% endblock %}
+{% block extrahead %}<meta charset="utf-8">{{ block.super }}{% endblock %}
+{% block responsive %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'ryu_admin/theme.css' %}">
+{% endblock %}

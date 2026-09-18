@@ -1,0 +1,14 @@
+{% load i18n ryu_admin %}
+{% for app in app_list %}
+<div class="app-{{ app.app_label }} module{% if app.app_url in request.path|urlencode %} current-app{% endif %}">
+  <table>
+    <caption><a href="{{ app.app_url }}" class="section">{{ app|app_label }}</a></caption>
+    {% for model in app.models %}
+    <tr class="model-{{ model.object_name|lower }}{% if model.admin_url and model.admin_url in request.path|urlencode %} current-model{% endif %}">
+      <th scope="row">{% if model.admin_url %}<a href="{{ model.admin_url }}"{% if model.admin_url in request.path|urlencode %} aria-current="page"{% endif %}>{{ model|model_label }}</a>{% else %}{{ model|model_label }}{% endif %}</th>
+      {% if show_changelinks %}<td>{% if model.add_url %}<a href="{{ model.add_url }}" class="addlink">เพิ่ม</a>{% endif %}</td>{% endif %}
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% empty %}<p>คุณยังไม่มีสิทธิ์เข้าถึงข้อมูลในส่วนนี้</p>{% endfor %}

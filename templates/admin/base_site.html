@@ -1,0 +1,11 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ title }} | RyuClass Admin{% endblock %}
+{% block branding %}
+<a class="ryu-brand" href="{% url 'admin:index' %}"><span class="ryu-brand-mark" aria-hidden="true">R</span><span>RyuClass <small>ADMIN WORKSPACE</small></span></a>
+{% endblock %}
+{% block welcome-msg %}<span class="ryu-user">{% firstof user.name user.get_username %}</span>{% endblock %}
+{% block userlinks %}
+<a href="{% url 'admin:index' %}">หน้าหลัก</a>
+{% if user.has_usable_password %}<a href="{% url 'admin:password_change' %}">เปลี่ยนรหัสผ่าน</a>{% endif %}
+<form id="logout-form" method="post" action="{% url 'admin:logout' %}">{% csrf_token %}<button type="submit">ออกจากระบบ</button></form>
+{% endblock %}

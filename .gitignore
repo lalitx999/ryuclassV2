@@ -1,0 +1,12 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+db.sqlite3
+*.log
+.DS_Store
+storage/slips/*
+!storage/slips/.gitkeep
+storage/community/*
+!storage/community/.gitkeep
