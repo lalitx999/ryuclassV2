@@ -30,6 +30,31 @@ class UserAdmin(BaseUserAdmin):
     )
     search_fields = ('email', 'name')
     filter_horizontal = ('groups', 'user_permissions')
+    actions = ['send_broadcast_email_action']
+
+    @admin.action(description='📧 บรอดแคสต์ส่งอีเมลหาผู้ใช้ที่เลือก (Hostinger SMTP)')
+    def send_broadcast_email_action(self, request, queryset):
+        from django.core.mail import send_mail
+        from django.conf import settings
+
+        recipients = list(queryset.values_list('email', flat=True))
+        if not recipients:
+            self.message_user(request, "ไม่พบอีเมลผู้ใช้งานที่เลือก", level='error')
+            return
+
+        subject = "🔔 แจ้งเตือนข่าวสารและคอร์สเรียนจาก RyuClass"
+        message = "สวัสดีครับนักเรียน RyuClass\n\nระบบขอแจ้งเตือนอัปเดตคอร์สเรียนและกิจกรรมภาษาญี่ปุ่นล่าสุด สามารถเข้าเรียนได้ทาง https://ryuclassv2.vercel.app\n\nขอให้สนุกกับการเรียนครับ!\nทีมงาน RyuClass"
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'RyuClass <support@chatbotth.me>')
+
+        success_count = 0
+        for email_addr in recipients:
+            try:
+                send_mail(subject, message, from_email, [email_addr], fail_silently=True)
+                success_count += 1
+            except Exception:
+                pass
+
+        self.message_user(request, f"ส่งอีเมลบรอดแคสต์สำเร็จแล้ว {success_count}/{len(recipients)} รายชื่อ")
 
     def save_model(self, request, obj, form, change):
         # Save user object

@@ -3,7 +3,7 @@ from django.urls import path, re_path, include
 from django.views.static import serve
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from users.views import RegisterView, ProfileView, LoginView
+from users.views import RegisterView, ProfileView, LoginView, BroadcastEmailView
 from courses.views import (
     DashboardView, CourseDetailView, FreeTrialLessonsView, SaveProgressView, 
     ChatBotView, NoteView, GameScoreView, ResetPasswordView, AdminPaymentsView,
@@ -55,6 +55,7 @@ urlpatterns = [
     # ── Payment & Admin APIs ─────────────────────────────
     path('api/payments/upload-slip/', UploadSlipView.as_view(), name='api_upload_slip'),
     path('api/admin/payments/', AdminPaymentsView.as_view(), name='api_admin_payments'),
+    path('api/admin/broadcast-email/', BroadcastEmailView.as_view(), name='api_admin_broadcast_email'),
 
     # ── RyuCommunity Forum APIs ──────────────────────────
     path('api/community/', include('community.urls')),

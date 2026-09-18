@@ -199,3 +199,51 @@ class ProfileView(APIView):
             
         user.save()
         return Response({'message': 'อัปเดตข้อมูลโปรไฟล์เรียบร้อยแล้ว'})
+
+class BroadcastEmailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != 'admin' and not request.user.is_staff:
+            return Response({'error': 'เฉพาะแอดมินเท่านั้นที่มีสิทธิ์ส่งอีเมลบรอดแคสต์'}, status=status.HTTP_403_FORBIDDEN)
+
+        subject = request.data.get('subject')
+        message = request.data.get('message')
+        target_role = request.data.get('target_role', 'all')
+
+        if not subject or not message:
+            return Response({'error': 'กรุณาระบุหัวข้อ (subject) และเนื้อหา (message) ของอีเมล'}, status=status.HTTP_400_BAD_REQUEST)
+
+        queryset = User.objects.filter(is_active=True)
+        if target_role == 'student':
+            queryset = queryset.filter(role='student')
+        elif target_role == 'admin':
+            queryset = queryset.filter(role='admin')
+
+        recipient_list = list(queryset.values_list('email', flat=True))
+        if not recipient_list:
+            return Response({'error': 'ไม่พบรายชื่ออีเมลผู้ใช้งานที่ตรงตามเงื่อนไข'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.core.mail import EmailMultiAlternatives
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'RyuClass <support@chatbotth.me>')
+
+        success_count = 0
+        for recipient in recipient_list:
+            try:
+                email_msg = EmailMultiAlternatives(
+                    subject=subject,
+                    body=message,
+                    from_email=from_email,
+                    to=[recipient]
+                )
+                email_msg.send(fail_silently=True)
+                success_count += 1
+            except Exception:
+                pass
+
+        return Response({
+            'message': f'บรอดแคสต์ส่งอีเมลสำเร็จแล้ว {success_count}/{len(recipient_list)} รายชื่อ',
+            'total_sent': success_count,
+            'total_target': len(recipient_list)
+        }, status=status.HTTP_200_OK)
+
