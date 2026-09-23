@@ -107,7 +107,8 @@ class Note(models.Model):
 
 class GameScore(models.Model):
     id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='game_scores', db_column='user_id', null=True, blank=True)
+    # Legacy user IDs are unsigned in the production MySQL schema.
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='game_scores', db_column='user_id', null=True, blank=True, db_constraint=False)
     player_name = models.CharField(max_length=50, blank=True, default='')
     game_mode = models.CharField(max_length=50, default='kana')
     jlpt_level = models.CharField(max_length=2, default='N5')
