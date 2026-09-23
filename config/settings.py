@@ -133,7 +133,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
 # CORS Config
-CORS_ALLOW_ALL_ORIGINS = True  # In production, change to specific origins
+# The frontend is deployed separately on Vercel.  Use an explicit allow-list in
+# production so every Django response to its browser requests receives the CORS
+# headers it needs, including authenticated API calls.
+_cors_origins = os.getenv(
+    'CORS_ALLOWED_ORIGINS',
+    'https://ryuclassv2.vercel.app,http://localhost:3000,http://127.0.0.1:3000',
+)
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins.split(',') if origin.strip()]
 CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
@@ -168,4 +175,3 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False') == 'True'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
-
