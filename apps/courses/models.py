@@ -145,7 +145,7 @@ class RyutubeVideo(models.Model):
     """A publicly published video; it never grants access to a member course."""
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=280, unique=True)
+    slug = models.SlugField(max_length=255, unique=True)
     description = models.TextField(blank=True, default='')
     video_url = models.TextField(help_text='YouTube URL or embed URL')
     thumbnail = models.CharField(max_length=500, blank=True, default='')

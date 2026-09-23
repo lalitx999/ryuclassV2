@@ -19,7 +19,7 @@ def ensure_ryutube_tables(apps, schema_editor):
         if 'ryutube_videos' not in tables:
             cursor.execute(
                 "CREATE TABLE ryutube_videos ("
-                "id INT NOT NULL AUTO_INCREMENT, title VARCHAR(255) NOT NULL, slug VARCHAR(280) NOT NULL, "
+                "id INT NOT NULL AUTO_INCREMENT, title VARCHAR(255) NOT NULL, slug VARCHAR(255) NOT NULL, "
                 "description LONGTEXT NOT NULL, video_url LONGTEXT NOT NULL, thumbnail VARCHAR(500) NOT NULL DEFAULT '', "
                 "is_published TINYINT(1) NOT NULL DEFAULT 0, published_at DATETIME(6) NULL, sort_order INT NOT NULL DEFAULT 0, "
                 "created_at DATETIME(6) NOT NULL, updated_at DATETIME(6) NOT NULL, "
@@ -53,7 +53,7 @@ class Migration(migrations.Migration):
                     fields=[
                         ('id', models.AutoField(primary_key=True, serialize=False)),
                         ('title', models.CharField(max_length=255)),
-                        ('slug', models.SlugField(max_length=280, unique=True)),
+                        ('slug', models.SlugField(max_length=255, unique=True)),
                         ('description', models.TextField(blank=True, default='')),
                         ('video_url', models.TextField(help_text='YouTube URL or embed URL')),
                         ('thumbnail', models.CharField(blank=True, default='', max_length=500)),
