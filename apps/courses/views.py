@@ -2,6 +2,7 @@ import os
 import base64
 import re
 import requests
+from django.db import models
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -10,7 +11,7 @@ from django.utils import timezone
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
-from .models import Course, Module, Lesson, Enrollment, Progress
+from .models import Course, Module, Lesson, Enrollment, Progress, RyutubeCategory, RyutubeVideo
 from .services import AccessService
 from config.ai import get_provider_config
 from support.models import AraigoguSession, AraigoguMessage
@@ -195,6 +196,53 @@ class FreeTrialLessonsView(APIView):
             })
             
         return Response(result)
+
+
+def serialize_ryutube_video(video):
+    return {
+        'id': video.id,
+        'title': video.title,
+        'slug': video.slug,
+        'description': video.description,
+        'video_url': to_embed_url(video.video_url),
+        'thumbnail': video.thumbnail,
+        'category': {'name': video.category.name, 'slug': video.category.slug} if video.category else None,
+        'linked_course': {'id': video.linked_course.id, 'title': video.linked_course.title} if video.linked_course else None,
+        'published_at': video.published_at,
+    }
+
+
+class RyutubeCategoryListView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        categories = RyutubeCategory.objects.filter(is_active=True).order_by('sort_order', 'name')
+        return Response([{'name': category.name, 'slug': category.slug} for category in categories])
+
+
+class RyutubeVideoListView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        videos = RyutubeVideo.objects.filter(is_published=True).select_related('category', 'linked_course')
+        category = request.query_params.get('category')
+        search = request.query_params.get('search', '').strip()
+        if category:
+            videos = videos.filter(category__slug=category)
+        if search:
+            videos = videos.filter(models.Q(title__icontains=search) | models.Q(description__icontains=search))
+        return Response([serialize_ryutube_video(video) for video in videos])
+
+
+class RyutubeVideoDetailView(APIView):
+    permission_classes = []
+
+    def get(self, request, slug):
+        try:
+            video = RyutubeVideo.objects.select_related('category', 'linked_course').get(slug=slug, is_published=True)
+        except RyutubeVideo.DoesNotExist:
+            return Response({'error': 'ไม่พบวิดีโอ Ryutube'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(serialize_ryutube_video(video))
 
 class SaveProgressView(APIView):
     permission_classes = [IsAuthenticated]
@@ -390,13 +438,19 @@ class GameScoreView(APIView):
 
     def get(self, request):
         game_mode = request.query_params.get('game_mode', 'kana')
-        scores = GameScore.objects.filter(game_mode=game_mode).select_related('user').order_by('-score')[:10]
+        jlpt_level = request.query_params.get('jlpt_level')
+        scores = GameScore.objects.filter(game_mode=game_mode)
+        if jlpt_level in ('N5', 'N4', 'N3', 'N2', 'N1'):
+            scores = scores.filter(jlpt_level=jlpt_level)
+        scores = scores.select_related('user').order_by('-score', 'created_at')[:10]
         
         result = []
         for s in scores:
-            name_display = s.user.name or s.user.email.split('@')[0]
-            if s.user.nickname:
-                name_display = f"{s.user.nickname} ({s.user.name or 'นักเรียน'})"
+            name_display = s.player_name or 'ผู้เล่น Ryugame'
+            if s.user:
+                name_display = s.user.name or s.user.email.split('@')[0]
+                if s.user.nickname:
+                    name_display = f"{s.user.nickname} ({s.user.name or 'นักเรียน'})"
             result.append({
                 'id': s.id,
                 'user_name': name_display,
@@ -407,17 +461,25 @@ class GameScoreView(APIView):
         return Response(result)
 
     def post(self, request):
-        if not request.user or not request.user.is_authenticated:
-            return Response({'error': 'กรุณาเข้าสู่ระบบก่อนบันทึกคะแนน'}, status=status.HTTP_401_UNAUTHORIZED)
-            
-        user = request.user
         game_mode = request.data.get('game_mode', 'kana')
-        score = request.data.get('score', 0)
+        jlpt_level = request.data.get('jlpt_level', 'N5')
+        player_name = str(request.data.get('player_name', '')).strip()
+        try:
+            score = max(0, int(request.data.get('score', 0)))
+        except (TypeError, ValueError):
+            return Response({'error': 'คะแนนไม่ถูกต้อง'}, status=status.HTTP_400_BAD_REQUEST)
+        if jlpt_level not in ('N5', 'N4', 'N3', 'N2', 'N1'):
+            return Response({'error': 'ระดับ JLPT ไม่ถูกต้อง'}, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user if request.user and request.user.is_authenticated else None
+        if not user and not player_name:
+            return Response({'error': 'กรุณาระบุชื่อผู้เล่น'}, status=status.HTTP_400_BAD_REQUEST)
 
         game_score = GameScore.objects.create(
             user=user,
+            player_name='' if user else player_name[:50],
             game_mode=game_mode,
-            score=int(score)
+            jlpt_level=jlpt_level,
+            score=score
         )
         return Response({
             'message': 'บันทึกคะแนนเข้าสู่ตารางคะแนนเรียบร้อย',
@@ -845,6 +907,4 @@ class SendRenewalRemindersView(APIView):
             'sent_count': sent_count,
             'failed_count': failed_count
         })
-
-
 

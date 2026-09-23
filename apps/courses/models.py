@@ -107,8 +107,10 @@ class Note(models.Model):
 
 class GameScore(models.Model):
     id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='game_scores', db_column='user_id')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='game_scores', db_column='user_id', null=True, blank=True)
+    player_name = models.CharField(max_length=50, blank=True, default='')
     game_mode = models.CharField(max_length=50, default='kana')
+    jlpt_level = models.CharField(max_length=2, default='N5')
     score = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -116,5 +118,49 @@ class GameScore(models.Model):
         db_table = 'game_scores'
 
     def __str__(self):
-        return f"Score {self.score} ({self.game_mode}) by {self.user.email}"
+        name = self.user.email if self.user else self.player_name
+        return f"Score {self.score} ({self.game_mode}/{self.jlpt_level}) by {name}"
 
+
+class RyutubeCategory(models.Model):
+    """A public, editorial category. It is deliberately separate from courses."""
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=120, unique=True)
+    sort_order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'ryutube_categories'
+        ordering = ('sort_order', 'name')
+        verbose_name = 'หมวด Ryutube'
+        verbose_name_plural = 'หมวด Ryutube'
+
+    def __str__(self):
+        return self.name
+
+
+class RyutubeVideo(models.Model):
+    """A publicly published video; it never grants access to a member course."""
+    id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=280, unique=True)
+    description = models.TextField(blank=True, default='')
+    video_url = models.TextField(help_text='YouTube URL or embed URL')
+    thumbnail = models.CharField(max_length=500, blank=True, default='')
+    category = models.ForeignKey(RyutubeCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='videos')
+    linked_course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True, related_name='ryutube_videos')
+    is_published = models.BooleanField(default=False)
+    published_at = models.DateTimeField(null=True, blank=True)
+    sort_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'ryutube_videos'
+        ordering = ('-published_at', 'sort_order', '-created_at')
+        verbose_name = 'วิดีโอ Ryutube'
+        verbose_name_plural = 'วิดีโอ Ryutube'
+
+    def __str__(self):
+        return self.title

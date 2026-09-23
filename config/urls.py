@@ -8,7 +8,8 @@ from courses.views import (
     DashboardView, CourseDetailView, FreeTrialLessonsView, SaveProgressView, 
     ChatBotView, NoteView, GameScoreView, ResetPasswordView, AdminPaymentsView,
     AraigoguChatView, AraigoguHistoryView, AraigoguSessionDetailView,
-    SendRenewalRemindersView
+    SendRenewalRemindersView, RyutubeCategoryListView, RyutubeVideoListView,
+    RyutubeVideoDetailView
 )
 from quizzes.views import QuizDetailView, SubmitQuizView
 from payments.views import UploadSlipView
@@ -33,6 +34,9 @@ urlpatterns = [
     
     # ── Student Learning APIs ────────────────────────────
     path('api/courses/free-trial/', FreeTrialLessonsView.as_view(), name='api_free_trial'),
+    path('api/ryutube/categories/', RyutubeCategoryListView.as_view(), name='api_ryutube_categories'),
+    path('api/ryutube/videos/', RyutubeVideoListView.as_view(), name='api_ryutube_videos'),
+    path('api/ryutube/videos/<slug:slug>/', RyutubeVideoDetailView.as_view(), name='api_ryutube_video_detail'),
     path('api/courses/dashboard/', DashboardView.as_view(), name='api_courses_dashboard'),
     path('api/courses/<int:course_id>/', CourseDetailView.as_view(), name='api_course_detail'),
     path('api/courses/save-progress/', SaveProgressView.as_view(), name='api_save_progress'),
@@ -62,5 +66,4 @@ urlpatterns = [
     # ── RyuCommunity Forum APIs ──────────────────────────
     path('api/community/', include('community.urls')),
 ]
-
 
