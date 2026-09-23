@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('category', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='videos', to='courses.ryutubecategory')),
-                ('linked_course', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='ryutube_videos', to='courses.course')),
+                ('linked_course', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='ryutube_videos', to='courses.course')),
             ],
             options={'db_table': 'ryutube_videos', 'ordering': ('-published_at', 'sort_order', '-created_at'), 'verbose_name': 'วิดีโอ Ryutube', 'verbose_name_plural': 'วิดีโอ Ryutube'},
         ),

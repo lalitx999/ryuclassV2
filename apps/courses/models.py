@@ -149,7 +149,9 @@ class RyutubeVideo(models.Model):
     video_url = models.TextField(help_text='YouTube URL or embed URL')
     thumbnail = models.CharField(max_length=500, blank=True, default='')
     category = models.ForeignKey(RyutubeCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='videos')
-    linked_course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True, related_name='ryutube_videos')
+    # Legacy production databases use a different primary-key definition for courses.
+    # Keep this optional editorial link without creating an incompatible DB-level FK.
+    linked_course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True, related_name='ryutube_videos', db_constraint=False)
     is_published = models.BooleanField(default=False)
     published_at = models.DateTimeField(null=True, blank=True)
     sort_order = models.IntegerField(default=0)
