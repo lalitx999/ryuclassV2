@@ -2,7 +2,6 @@ import os
 import base64
 import re
 import requests
-from django.db import models
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -11,7 +10,7 @@ from django.utils import timezone
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
-from .models import Course, Module, Lesson, Enrollment, Progress, RyutubeCategory, RyutubeVideo
+from .models import Course, Module, Lesson, Enrollment, Progress
 from .services import AccessService
 from config.ai import get_provider_config
 from support.models import AraigoguSession, AraigoguMessage
@@ -196,53 +195,6 @@ class FreeTrialLessonsView(APIView):
             })
             
         return Response(result)
-
-
-def serialize_ryutube_video(video):
-    return {
-        'id': video.id,
-        'title': video.title,
-        'slug': video.slug,
-        'description': video.description,
-        'video_url': to_embed_url(video.video_url),
-        'thumbnail': video.thumbnail,
-        'category': {'name': video.category.name, 'slug': video.category.slug} if video.category else None,
-        'linked_course': {'id': video.linked_course.id, 'title': video.linked_course.title} if video.linked_course else None,
-        'published_at': video.published_at,
-    }
-
-
-class RyutubeCategoryListView(APIView):
-    permission_classes = []
-
-    def get(self, request):
-        categories = RyutubeCategory.objects.filter(is_active=True).order_by('sort_order', 'name')
-        return Response([{'name': category.name, 'slug': category.slug} for category in categories])
-
-
-class RyutubeVideoListView(APIView):
-    permission_classes = []
-
-    def get(self, request):
-        videos = RyutubeVideo.objects.filter(is_published=True).select_related('category', 'linked_course')
-        category = request.query_params.get('category')
-        search = request.query_params.get('search', '').strip()
-        if category:
-            videos = videos.filter(category__slug=category)
-        if search:
-            videos = videos.filter(models.Q(title__icontains=search) | models.Q(description__icontains=search))
-        return Response([serialize_ryutube_video(video) for video in videos])
-
-
-class RyutubeVideoDetailView(APIView):
-    permission_classes = []
-
-    def get(self, request, slug):
-        try:
-            video = RyutubeVideo.objects.select_related('category', 'linked_course').get(slug=slug, is_published=True)
-        except RyutubeVideo.DoesNotExist:
-            return Response({'error': 'ไม่พบวิดีโอ Ryutube'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(serialize_ryutube_video(video))
 
 class SaveProgressView(APIView):
     permission_classes = [IsAuthenticated]
@@ -907,4 +859,3 @@ class SendRenewalRemindersView(APIView):
             'sent_count': sent_count,
             'failed_count': failed_count
         })
-

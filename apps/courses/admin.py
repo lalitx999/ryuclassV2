@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib import messages
-from .models import Course, Module, Lesson, Enrollment, Progress, Note, GameScore, RyutubeCategory, RyutubeVideo
+from .models import Course, Module, Lesson, Enrollment, Progress, Note, GameScore
 from .emails import send_course_renewal_reminder_email
 
 @admin.register(Course)
@@ -72,21 +72,3 @@ class GameScoreAdmin(admin.ModelAdmin):
     list_filter = ('jlpt_level', 'game_mode', 'created_at')
     search_fields = ('user__email', 'player_name', 'game_mode')
 
-
-@admin.register(RyutubeCategory)
-class RyutubeCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'sort_order', 'is_active')
-    list_filter = ('is_active',)
-    search_fields = ('name', 'slug')
-    prepopulated_fields = {'slug': ('name',)}
-    ordering = ('sort_order', 'name')
-
-
-@admin.register(RyutubeVideo)
-class RyutubeVideoAdmin(admin.ModelAdmin):
-    list_display = ('title', 'category', 'linked_course', 'is_published', 'published_at', 'sort_order')
-    list_filter = ('is_published', 'category', 'linked_course')
-    search_fields = ('title', 'description', 'slug')
-    prepopulated_fields = {'slug': ('title',)}
-    autocomplete_fields = ('category', 'linked_course')
-    ordering = ('-published_at', 'sort_order')
