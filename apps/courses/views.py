@@ -2,10 +2,11 @@ import os
 import base64
 import re
 import requests
+from datetime import timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils import timezone
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
@@ -116,17 +117,19 @@ class DashboardView(APIView):
         return Response(result)
 
 class CourseDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    # Visitors can view the course outline and its free preview lessons.  The
+    # per-lesson URL policy below still prevents full videos leaking out.
+    permission_classes = [AllowAny]
 
     def get(self, request, course_id):
-        user = request.user
+        user = request.user if request.user and request.user.is_authenticated else None
         try:
             course = Course.objects.get(id=course_id, is_active=True)
         except Course.DoesNotExist:
             return Response({'error': 'ไม่พบคอร์สเรียน'}, status=status.HTTP_404_NOT_FOUND)
 
         levels = {1: 'N5', 2: 'N4', 3: 'N3', 4: 'N2', 5: 'N1'}
-        has_access = AccessService.has_video_access(user.id, levels.get(course_id, 'N5'))
+        has_access = AccessService.has_video_access(user.id, levels.get(course_id, 'N5')) if user else False
 
         # Fetch modules
         modules = Module.objects.filter(course=course, is_active=True).order_by('sort_order')
@@ -138,7 +141,7 @@ class CourseDetailView(APIView):
             
             for lesson in lessons:
                 # Find progress for this lesson
-                progress = Progress.objects.filter(user=user, lesson=lesson).first()
+                progress = Progress.objects.filter(user=user, lesson=lesson).first() if user else None
                 video_time = 0
                 is_completed = False
                 if progress:
@@ -153,6 +156,7 @@ class CourseDetailView(APIView):
                 result_lessons.append({
                     'id': lesson.id,
                     'title': lesson.title,
+                    'description': lesson.description or '',
                     'duration_seconds': lesson.duration,
                     'is_free': lesson.is_free,
                     'video_time': video_time,
@@ -170,6 +174,9 @@ class CourseDetailView(APIView):
         return Response({
             'course_id': course.id,
             'course_title': course.title,
+            'course_description': course.description or '',
+            'price': str(course.price),
+            'thumbnail': course.thumbnail or '',
             'has_access': has_access,
             'modules': result_modules
         })
@@ -483,6 +490,8 @@ class AdminPaymentsView(APIView):
                 'course_title': p.course.title,
                 'amount': float(p.amount),
                 'duration_days': p.duration_days,
+                'is_renewal': p.is_renewal,
+                'discount_percent': p.discount_percent,
                 'status': p.status,
                 'submitted_at': p.submitted_at.strftime('%d/%m/%Y %H:%M') if p.submitted_at else '-'
             })
@@ -502,10 +511,13 @@ class AdminPaymentsView(APIView):
             return Response({'error': 'ไม่พบรายการชำระเงินนี้'}, status=status.HTTP_404_NOT_FOUND)
 
         if action == 'approve':
+            if payment.status == 'approved':
+                return Response({'message': 'รายการนี้อนุมัติไปแล้ว'})
             payment.status = 'approved'
             payment.reviewed_at = timezone.now()
             payment.reviewed_by = request.user
             payment.save()
+            AccessService.add_payment(payment.user.id, payment.amount)
 
             # Activate enrollment for user
             enrollment, created = Enrollment.objects.get_or_create(
@@ -518,16 +530,21 @@ class AdminPaymentsView(APIView):
             if payment.duration_days == 9999:
                 enrollment.is_lifetime_video = True
             else:
-                enrollment.video_expires_at = timezone.now().date() + timezone.timedelta(days=payment.duration_days)
+                if payment.is_renewal and enrollment.video_expires_at:
+                    enrollment.video_expires_at = max(enrollment.video_expires_at, timezone.now().date()) + timedelta(days=payment.duration_days)
+                else:
+                    enrollment.video_expires_at = timezone.now().date() + timedelta(days=payment.duration_days)
             enrollment.save()
 
             return Response({'message': f'อนุมัติสิทธิ์เข้าเรียนเรียบร้อยแล้วสำหรับ {payment.user.email}'})
-        else:
+        if action == 'reject':
             payment.status = 'rejected'
             payment.reviewed_at = timezone.now()
             payment.reviewed_by = request.user
             payment.save()
             return Response({'message': 'ปฏิเสธรายการชำระเงินเรียบร้อยแล้ว'})
+
+        return Response({'error': 'คำสั่งอนุมัติไม่ถูกต้อง'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 def get_araigogu_system_prompt(lang: str, mode: str) -> str:

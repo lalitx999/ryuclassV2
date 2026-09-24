@@ -3,7 +3,7 @@ from django.urls import path, re_path, include
 from django.views.static import serve
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from users.views import RegisterView, ProfileView, LoginView, BroadcastEmailView
+from users.views import RegisterView, ProfileView, LoginView, BroadcastEmailView, VerifyEmailView, ResendEmailVerificationView
 from courses.views import (
     DashboardView, CourseDetailView, FreeTrialLessonsView, SaveProgressView, 
     ChatBotView, NoteView, GameScoreView, ResetPasswordView, AdminPaymentsView,
@@ -26,6 +26,8 @@ urlpatterns = [
     
     # ── JWT Authentication APIs ──────────────────────────
     path('api/auth/register/', RegisterView.as_view(), name='api_register'),
+    path('api/auth/verify-email/', VerifyEmailView.as_view(), name='api_verify_email'),
+    path('api/auth/resend-verification/', ResendEmailVerificationView.as_view(), name='api_resend_email_verification'),
     path('api/auth/login/', LoginView.as_view(), name='api_login'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='api_token_refresh'),
     path('api/auth/profile/', ProfileView.as_view(), name='api_profile'),

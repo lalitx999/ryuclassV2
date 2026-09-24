@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from django.conf import settings
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -80,3 +81,18 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.name or self.email} ({self.role})"
+
+
+class EmailVerificationCode(models.Model):
+    """One-time email verification challenge for newly registered students."""
+    # Legacy users.id is unsigned in production; avoid a fragile MySQL FK constraint.
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='email_verification_codes', db_constraint=False)
+    code_hash = models.CharField(max_length=128)
+    expires_at = models.DateTimeField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+    verified_at = models.DateTimeField(blank=True, null=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = 'email_verification_codes'
+        ordering = ('-sent_at',)

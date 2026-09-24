@@ -11,8 +11,8 @@ class Command(BaseCommand):
             '--days',
             nargs='+',
             type=int,
-            default=[7, 3, 1],
-            help='Days before expiration to send reminder for (default: 7 3 1)'
+            default=[3, 2, 1],
+            help='Days before expiration to send reminder for (default: 3 2 1)'
         )
         parser.add_argument(
             '--include-expired',

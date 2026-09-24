@@ -20,6 +20,8 @@ class Payment(models.Model):
         default='pending'
     )
     rejection_reason = models.CharField(max_length=255, blank=True, null=True)
+    is_renewal = models.BooleanField(default=False)
+    discount_percent = models.PositiveSmallIntegerField(default=0)
     submitted_at = models.DateTimeField(auto_now_add=True)
     reviewed_at = models.DateTimeField(blank=True, null=True)
     reviewed_by = models.ForeignKey(

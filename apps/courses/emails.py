@@ -81,6 +81,9 @@ def send_course_renewal_reminder_email(enrollment: Enrollment, days_remaining: i
                     <p style="color:#cbd5e1; font-size:15px; line-height:1.6; margin-bottom:24px;">
                         {status_sub} เพื่อการเรียนรู้ภาษาญี่ปุ่นอย่างต่อเนื่องและไม่ขาดช่วง ขอแนะนำให้ดำเนินการต่ออายุคอร์สเรียนของคุณ
                     </p>
+                    <p style="background:#fef3c7; border:1px solid #f59e0b; border-radius:10px; color:#78350f; font-size:14px; font-weight:700; line-height:1.5; margin:0 0 20px; padding:12px 16px; text-align:center;">
+                        ต่ออายุก่อนหมดอายุ รับส่วนลด 10% และต่อสิทธิ์เพิ่ม 33 วัน
+                    </p>
 
                     <!-- Details Box -->
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#0f172a; border-radius:12px; padding:20px; border:1px solid #334155; margin-bottom:28px;">
@@ -100,7 +103,7 @@ def send_course_renewal_reminder_email(enrollment: Enrollment, days_remaining: i
 
                     <!-- Call To Action -->
                     <div style="text-align: center; margin-bottom: 24px;">
-                        <a href="https://ryuclassv2.vercel.app/courses" target="_blank" style="display:inline-block; background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color:#ffffff; text-decoration:none; font-weight:700; font-size:16px; padding:14px 32px; border-radius:10px; box-shadow:0 4px 14px 0 rgba(99, 102, 241, 0.39);">
+                        <a href="https://ryuclassv2.vercel.app/courses/{course.id}" target="_blank" style="display:inline-block; background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color:#ffffff; text-decoration:none; font-weight:700; font-size:16px; padding:14px 32px; border-radius:10px; box-shadow:0 4px 14px 0 rgba(99, 102, 241, 0.39);">
                             🔗 เข้าสู่ระบบเพื่อต่ออายุคอร์สเรียน
                         </a>
                     </div>
@@ -137,7 +140,8 @@ def send_course_renewal_reminder_email(enrollment: Enrollment, days_remaining: i
     อีเมล: {user.email}
     วันหมดอายุ: {expiry_date_str}
 
-    ต่ออายุคอร์สเรียนได้ที่: https://ryuclassv2.vercel.app/courses
+    ต่ออายุก่อนหมดอายุ รับส่วนลด 10% และต่อสิทธิ์เพิ่ม 33 วัน
+    ต่ออายุคอร์สเรียนได้ที่: https://ryuclassv2.vercel.app/courses/{course.id}
 
     ขอบคุณครับ,
     ทีมงาน RyuClass

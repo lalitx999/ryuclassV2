@@ -1,5 +1,7 @@
 import os
+import secrets
 import time
+from datetime import timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -8,10 +10,42 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.db import transaction
 from django.conf import settings
-from .models import User
+from django.contrib.auth.hashers import check_password, make_password
+from django.core.mail import send_mail
+from django.utils import timezone
+from .models import EmailVerificationCode, User
 from .utils import notify_admin_new_order
 from payments.models import Payment
 from courses.models import Course, Enrollment
+
+
+VERIFICATION_CODE_TTL_MINUTES = 10
+VERIFICATION_RESEND_WAIT_SECONDS = 60
+VERIFICATION_MAX_ATTEMPTS = 5
+
+
+def create_and_send_verification_code(user):
+    """Invalidate previous challenges, then email a fresh six-digit OTP."""
+    now = timezone.now()
+    EmailVerificationCode.objects.filter(user=user, verified_at__isnull=True).update(expires_at=now)
+    code = f'{secrets.randbelow(1_000_000):06d}'
+    EmailVerificationCode.objects.create(
+        user=user,
+        code_hash=make_password(code),
+        expires_at=now + timedelta(minutes=VERIFICATION_CODE_TTL_MINUTES),
+    )
+    send_mail(
+        subject='รหัสยืนยันอีเมล RyuClass',
+        message=(
+            f'สวัสดีครับ {user.name or "นักเรียน RyuClass"}\n\n'
+            f'รหัสยืนยันอีเมลของคุณคือ: {code}\n'
+            f'รหัสนี้ใช้ได้ {VERIFICATION_CODE_TTL_MINUTES} นาที และห้ามบอกรหัสนี้กับผู้อื่น\n\n'
+            'ทีมงาน RyuClass'
+        ),
+        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
 
 class LoginView(APIView):
     def post(self, request):
@@ -33,6 +67,13 @@ class LoginView(APIView):
 
             if not user.is_active:
                 return Response({'detail': 'บัญชีผู้ใช้นี้ถูกระงับการใช้งาน'}, status=status.HTTP_400_BAD_REQUEST)
+
+            pending_verification = EmailVerificationCode.objects.filter(user=user, verified_at__isnull=True).exists()
+            if pending_verification and not user.email_verified:
+                return Response({
+                    'detail': 'กรุณายืนยันอีเมลด้วยรหัส 6 หลักก่อนเข้าสู่ระบบ',
+                    'verification_required': True,
+                }, status=status.HTTP_403_FORBIDDEN)
 
             refresh = RefreshToken.for_user(user)
             return Response({
@@ -96,7 +137,7 @@ class RegisterView(APIView):
 
             # 3. Calculate Amount
             price_matrix = {
-                'N5': {30: 1.0, 180: 5000.0, 365: 9000.0, 9999: 10000.0},
+                'N5': {30: 1000.0, 180: 5000.0, 365: 9000.0, 9999: 10000.0},
                 'N4': {30: 1250.0, 180: 6500.0, 365: 12000.0, 9999: 20000.0},
                 'N3': {30: 1500.0, 180: 8000.0, 365: 15000.0, 9999: 30000.0},
                 'N2': {30: 1750.0, 180: 9500.0, 365: 18000.0, 9999: 40000.0},
@@ -138,12 +179,19 @@ class RegisterView(APIView):
                 amount=amount
             )
 
-            # 7. Generate tokens
-            refresh = RefreshToken.for_user(user)
+            # 7. Send a six-digit verification code before allowing login.
+            try:
+                create_and_send_verification_code(user)
+            except Exception:
+                transaction.set_rollback(True)
+                return Response(
+                    {'error': 'ไม่สามารถส่งรหัสยืนยันอีเมลได้ กรุณาลองสมัครใหม่อีกครั้งในภายหลัง'},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+
             return Response({
-                'message': 'ลงทะเบียนเรียบร้อยแล้ว กรุณารอแอดมินตรวจสอบสลิปภายใน 24 ชม.',
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
+                'message': 'ลงทะเบียนเรียบร้อยแล้ว กรุณาตรวจสอบอีเมลและกรอกรหัส 6 หลักเพื่อยืนยันบัญชี',
+                'verification_required': True,
                 'user': {
                     'email': user.email,
                     'name': user.name,
@@ -153,6 +201,61 @@ class RegisterView(APIView):
 
         except Exception as e:
             return Response({'error': f'เกิดข้อผิดพลาด: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class VerifyEmailView(APIView):
+    def post(self, request):
+        email = str(request.data.get('email', '')).strip().lower()
+        code = str(request.data.get('code', '')).strip()
+        if not email or not code.isdigit() or len(code) != 6:
+            return Response({'error': 'กรุณากรอกอีเมลและรหัสยืนยัน 6 หลักให้ครบถ้วน'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            return Response({'error': 'รหัสยืนยันไม่ถูกต้องหรือหมดอายุ'}, status=status.HTTP_400_BAD_REQUEST)
+
+        challenge = EmailVerificationCode.objects.filter(user=user, verified_at__isnull=True).first()
+        if not challenge or challenge.expires_at <= timezone.now():
+            return Response({'error': 'รหัสยืนยันหมดอายุ กรุณาขอรหัสใหม่'}, status=status.HTTP_400_BAD_REQUEST)
+        if challenge.attempts >= VERIFICATION_MAX_ATTEMPTS:
+            return Response({'error': 'กรอกรหัสผิดเกินกำหนด กรุณาขอรหัสใหม่'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        challenge.attempts += 1
+        if not check_password(code, challenge.code_hash):
+            challenge.save(update_fields=['attempts'])
+            return Response({'error': 'รหัสยืนยันไม่ถูกต้อง'}, status=status.HTTP_400_BAD_REQUEST)
+
+        now = timezone.now()
+        challenge.verified_at = now
+        challenge.save(update_fields=['attempts', 'verified_at'])
+        user.email_verified = True
+        user.save(update_fields=['email_verified'])
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'message': 'ยืนยันอีเมลเรียบร้อยแล้ว',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': {'id': user.id, 'email': user.email, 'name': user.name, 'role': user.role},
+        })
+
+
+class ResendEmailVerificationView(APIView):
+    def post(self, request):
+        email = str(request.data.get('email', '')).strip().lower()
+        user = User.objects.filter(email__iexact=email).first()
+        if not user or user.email_verified:
+            return Response({'message': 'หากอีเมลนี้รอการยืนยัน ระบบจะส่งรหัสใหม่ให้'}, status=status.HTTP_200_OK)
+
+        latest = EmailVerificationCode.objects.filter(user=user, verified_at__isnull=True).first()
+        if latest and (timezone.now() - latest.sent_at).total_seconds() < VERIFICATION_RESEND_WAIT_SECONDS:
+            return Response({'error': 'กรุณารอ 1 นาทีก่อนขอรหัสใหม่'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        try:
+            create_and_send_verification_code(user)
+        except Exception:
+            return Response({'error': 'ไม่สามารถส่งรหัสใหม่ได้ กรุณาลองอีกครั้งภายหลัง'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response({'message': 'ส่งรหัสยืนยันใหม่ไปยังอีเมลแล้ว'})
 
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
@@ -246,4 +349,3 @@ class BroadcastEmailView(APIView):
             'total_sent': success_count,
             'total_target': len(recipient_list)
         }, status=status.HTTP_200_OK)
-

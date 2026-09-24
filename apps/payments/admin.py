@@ -1,19 +1,20 @@
 from django.contrib import admin, messages
 from django.utils.safestring import mark_safe
 from django.utils import timezone
+from datetime import timedelta
 from .models import Payment, SlipBlacklistPattern, SlipVerificationLog
 from courses.services import AccessService
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'amount', 'status', 'course', 'submitted_at', 'reviewed_at')
+    list_display = ('id', 'user', 'amount', 'is_renewal', 'discount_percent', 'status', 'course', 'submitted_at', 'reviewed_at')
     list_filter = ('status', 'submitted_at', 'reviewed_at')
     search_fields = ('user__email', 'user__name', 'course__title', 'trans_ref')
     readonly_fields = ('slip_preview', 'submitted_at', 'reviewed_at')
     actions = ['approve_payments', 'reject_payments']
 
     fieldsets = (
-        (None, {'fields': ('user', 'course', 'amount', 'duration_days', 'level_access', 'is_zoom_included')}),
+        (None, {'fields': ('user', 'course', 'amount', 'duration_days', 'level_access', 'is_zoom_included', 'is_renewal', 'discount_percent')}),
         ('Transaction details', {'fields': ('trans_ref', 'telegram_message_id', 'note')}),
         ('Review Status', {'fields': ('status', 'rejection_reason', 'reviewed_by', 'reviewed_at')}),
         ('Attachment', {'fields': ('slip_path', 'slip_preview')}),
@@ -58,8 +59,11 @@ class PaymentAdmin(admin.ModelAdmin):
                 if payment.duration_days == 9999:
                     enrollment.is_lifetime_video = True
                 else:
-                    expiry = AccessService.calculate_expiry(payment.duration_days, payment.is_zoom_included)
-                    enrollment.video_expires_at = expiry['video']
+                    if payment.is_renewal and enrollment.video_expires_at:
+                        enrollment.video_expires_at = max(enrollment.video_expires_at, timezone.now().date()) + timedelta(days=payment.duration_days)
+                    else:
+                        expiry = AccessService.calculate_expiry(payment.duration_days, payment.is_zoom_included)
+                        enrollment.video_expires_at = expiry['video']
                     if expiry['zoom']:
                         enrollment.zoom_expires_at = expiry['zoom']
                 enrollment.save()
