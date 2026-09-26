@@ -223,15 +223,23 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
 # CORS Config
-# The frontend is deployed separately on Vercel.  Use an explicit allow-list in
-# production so every Django response to its browser requests receives the CORS
-# headers it needs, including authenticated API calls.
 _cors_origins = os.getenv(
     'CORS_ALLOWED_ORIGINS',
-    'https://ryuclassv2.vercel.app,http://localhost:3000,http://127.0.0.1:3000',
+    'https://www.ryusosense.online,https://ryusosense.online,https://ryuclassv2.vercel.app,http://localhost:3000,http://127.0.0.1:3000',
 )
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins.split(',') if origin.strip()]
 CORS_ALLOW_CREDENTIALS = True
+
+# Reverse Proxy & SSL Settings for Nginx / Cloudflare
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
+_csrf_origins = os.getenv(
+    'CSRF_TRUSTED_ORIGINS',
+    'https://ryuapp-tanchon.tanchonhomeserverxxx.online,https://www.ryusosense.online,https://ryusosense.online',
+)
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins.split(',') if origin.strip()]
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
