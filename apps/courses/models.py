@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from django.core.validators import MinValueValidator
+from decimal import Decimal
 
 class Course(models.Model):
     id = models.AutoField(primary_key=True) # Explicit ID mapping (1-5 for N5-N1)
@@ -7,7 +9,10 @@ class Course(models.Model):
     slug = models.CharField(max_length=220)
     description = models.TextField(blank=True, null=True)
     details = models.TextField(blank=True, null=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    price = models.DecimalField('ราคารายเดือน (30 วัน)', max_digits=10, decimal_places=2, default=0.00, validators=[MinValueValidator(Decimal('0.01'))])
+    price_180 = models.DecimalField('ราคา 6 เดือน (180 วัน)', max_digits=10, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(Decimal('0.01'))], help_text='เว้นว่างเพื่อปิดแพ็กเกจ')
+    price_365 = models.DecimalField('ราคา 1 ปี (365 วัน)', max_digits=10, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(Decimal('0.01'))], help_text='เว้นว่างเพื่อปิดแพ็กเกจ')
+    price_lifetime = models.DecimalField('ราคาตลอดชีพ', max_digits=10, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(Decimal('0.01'))], help_text='เว้นว่างเพื่อปิดแพ็กเกจ')
     thumbnail = models.CharField(max_length=500, blank=True, null=True)
     is_active = models.BooleanField(default=True)
     sort_order = models.IntegerField(default=0)
@@ -121,4 +126,3 @@ class GameScore(models.Model):
     def __str__(self):
         name = self.user.email if self.user else self.player_name
         return f"Score {self.score} ({self.game_mode}/{self.jlpt_level}) by {name}"
-

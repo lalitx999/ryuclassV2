@@ -16,6 +16,8 @@ from .services import AccessService
 from config.ai import get_provider_config
 from support.models import AraigoguSession, AraigoguMessage
 
+from .pricing import package_prices
+
 def decrypt_video_url(encrypted_value: str) -> str:
     if not encrypted_value:
         return ""
@@ -105,6 +107,7 @@ class DashboardView(APIView):
                 'title': course.title,
                 'description': course.description,
                 'price': course.price,
+                'packages': package_prices(course),
                 'thumbnail': course.thumbnail,
                 'has_access': has_access,
                 'is_lifetime': is_lifetime,
@@ -176,6 +179,7 @@ class CourseDetailView(APIView):
             'course_title': course.title,
             'course_description': course.description or '',
             'price': str(course.price),
+            'packages': package_prices(course),
             'thumbnail': course.thumbnail or '',
             'has_access': has_access,
             'modules': result_modules

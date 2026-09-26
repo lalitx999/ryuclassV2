@@ -1,6 +1,7 @@
 import os
 import time
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
+from courses.pricing import package_amount
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -30,7 +31,7 @@ class UploadSlipView(APIView):
             )
 
         try:
-            course = Course.objects.get(id=course_id)
+            course = Course.objects.get(id=course_id, is_active=True)
         except Course.DoesNotExist:
             return Response({'error': 'ไม่พบคอร์สเรียน'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -38,15 +39,11 @@ class UploadSlipView(APIView):
         course_level_map = {1: 'N5', 2: 'N4', 3: 'N3', 4: 'N2', 5: 'N1'}
         level = course_level_map.get(course.id, 'N5')
 
-        price_matrix = {
-            'N5': {30: 1000.0, 180: 5000.0, 365: 9000.0, 9999: 10000.0},
-            'N4': {30: 1250.0, 180: 6500.0, 365: 12000.0, 9999: 20000.0},
-            'N3': {30: 1500.0, 180: 8000.0, 365: 15000.0, 9999: 30000.0},
-            'N2': {30: 1750.0, 180: 9500.0, 365: 18000.0, 9999: 40000.0},
-            'N1': {30: 2000.0, 180: 11000.0, 365: 21000.0, 9999: 50000.0},
-        }
-        requested_days = int(duration)
-        amount = Decimal(str(price_matrix.get(level, {}).get(requested_days, 1000.0)))
+        try:
+            requested_days = int(duration)
+            amount = package_amount(course, 30 if renewal_requested else requested_days)
+        except (ValueError, TypeError) as exc:
+            return Response({'error': str(exc)}, status=400)
         is_renewal = False
         discount_percent = 0
 
@@ -62,6 +59,15 @@ class UploadSlipView(APIView):
                 discount_percent = 10
                 requested_days = 33
                 amount = (Decimal(str(course.price)) * Decimal('0.90')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        if renewal_requested and not is_renewal:
+            return Response({'error': 'ยังไม่เข้าเงื่อนไขส่วนลดต่ออายุ กรุณาเลือกแพ็กเกจปกติ'}, status=400)
+        try:
+            expected = Decimal(str(request.data.get('expected_amount', '')))
+            if not expected.is_finite() or expected != amount:
+                return Response({'error': 'ราคามีการเปลี่ยนแปลง กรุณาปิดแล้วเปิดหน้าชำระเงินใหม่เพื่อตรวจสอบยอดก่อนโอน'}, status=409)
+        except InvalidOperation:
+            return Response({'error': 'กรุณาโหลดหน้าชำระเงินใหม่เพื่อยืนยันราคา'}, status=400)
 
         try:
             # Save Slip File
@@ -83,7 +89,7 @@ class UploadSlipView(APIView):
                 amount=amount,
                 duration_days=requested_days,
                 level_access=level,
-                is_zoom_included=(int(duration) >= 180),
+                is_zoom_included=(requested_days >= 180),
                 slip_path=filename,
                 status='pending',
                 is_renewal=is_renewal,
