@@ -20,7 +20,8 @@ ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
-    'django.contrib.admin',
+    # Retain audit-log models/migrations, without loading any ModelAdmin UI.
+    'django.contrib.admin.apps.SimpleAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -123,10 +124,6 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
-
-admin_lte_path = BASE_DIR.parent / 'AdminLTE-3.1.0'
-if admin_lte_path.exists():
-    STATICFILES_DIRS.append(admin_lte_path)
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'

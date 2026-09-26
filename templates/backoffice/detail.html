@@ -1,0 +1,30 @@
+{% extends 'backoffice/base.html' %}
+{% block content %}
+<div class="mb-3">
+<a class="btn btn-default" href="{% url 'backoffice:list' app name %}">กลับรายการ</a>
+{% if can_change %}<a class="btn btn-primary" href="{% url 'backoffice:edit' app name obj.pk %}">แก้ไขข้อมูล</a>{% endif %}
+{% if can_delete %}<a class="btn btn-outline-danger" href="{% url 'backoffice:delete' app name obj.pk %}">ลบรายการ</a>{% endif %}
+{% for link in related_links %}<a class="btn btn-outline-primary" href="{{ link.url }}">{{ link.label }}</a>{% endfor %}
+</div>
+<div class="row">
+{% if slip_url %}<div class="col-lg-5"><div class="card"><div class="card-header">หลักฐานชำระเงิน</div><div class="card-body"><a href="{{ slip_url }}" target="_blank" rel="noopener"><img class="img-fluid" src="{{ slip_url }}" alt="สลิปโอนเงิน"></a></div></div></div>{% endif %}
+<div class="col"><div class="card"><div class="card-body"><dl class="row">
+{% for label,value in fields %}<dt class="col-sm-4">{{ label }}</dt><dd class="col-sm-8 text-break">{{ value|linebreaksbr }}</dd>{% endfor %}
+</dl></div></div></div></div>
+{% if name == 'payment' and can_change and obj.status == 'pending' %}
+<div class="card card-warning"><div class="card-header">ผลตรวจสอบสลิป</div>
+<form method="post" action="{% url 'backoffice:payment-review' obj.pk %}" data-confirm="ยืนยันผลตรวจสอบสลิป?">{% csrf_token %}
+<div class="card-body"><label for="reason">เหตุผลที่ปฏิเสธ</label><textarea class="form-control" id="reason" name="reason" maxlength="255"></textarea></div>
+<div class="card-footer"><button name="action" value="approve" class="btn btn-success">อนุมัติและเปิดสิทธิ์เรียน</button><button name="action" value="reject" class="btn btn-danger">ปฏิเสธ</button></div></form></div>
+{% endif %}
+{% if can_change and actions %}
+<div class="card"><div class="card-header">ดำเนินการ</div><div class="card-body">
+{% for key,label in actions %}
+<form class="d-inline-block mb-2" method="post" action="{% url 'backoffice:action' app name obj.pk %}" data-confirm="ยืนยัน: {{ label }}?">{% csrf_token %}
+<button class="btn btn-outline-primary" name="action" value="{{ key }}">{{ label }}</button></form>
+{% endfor %}</div></div>{% endif %}
+<div class="card"><div class="card-header">ประวัติการจัดการ</div><div class="card-body">
+{% for log in logs %}<p>{{ log.action_time }} · {{ log.user.email }} · {{ log.change_message }}</p>{% empty %}<p class="text-muted">ยังไม่มีประวัติการจัดการ</p>{% endfor %}
+</div></div>
+<script>document.querySelectorAll('form[data-confirm]').forEach(function(form){form.addEventListener('submit',function(event){if(!window.confirm(form.dataset.confirm)){event.preventDefault();}});});</script>
+{% endblock %}

@@ -17,7 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 COPY . .
 
 # Collect static files for Django Admin UI
-RUN python manage.py collectstatic --noinput || true
+RUN python manage.py collectstatic --noinput --ignore admin --ignore tailwindadmin
 
 EXPOSE 8000
 

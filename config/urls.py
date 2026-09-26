@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.urls import path, re_path, include
-from apps.courses.admin_site import custom_admin_site
 from django.views.static import serve
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -15,7 +14,7 @@ from quizzes.views import QuizDetailView, SubmitQuizView
 from payments.views import UploadSlipView
 
 urlpatterns = [
-    path('admin/', custom_admin_site.urls),
+    path('admin/', include('backoffice.urls')),
     
     # Serve uploaded slips and community images in local development
     re_path(r'^storage/slips/(?P<path>.*)$', serve, {
