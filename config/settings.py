@@ -51,80 +51,76 @@ UNFOLD = {
     "SITE_URL": "/",
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": False,
-    "DASHBOARD_CALLBACK": "config.dashboard.dashboard_callback",
-    "STYLES": [
-        lambda request: "https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/1.39.1/iconfont/tabler-icons.min.css",
-    ],
     "SIDEBAR": {
         "show_search": True,
         "show_all_applications": True,
         "navigation": [
             {
-                "title": "แดชบอร์ดหลัก (Dashboard)",
+                "title": "แดชบอร์ดหลัก",
                 "separator": True,
                 "items": [
                     {
                         "title": "หน้าแรกแดชบอร์ด",
                         "icon": "dashboard",
-                        "link": lambda request: "/admin/",
+                        "link": "/admin/",
                     },
                 ],
             },
             {
-                "title": "การจัดการการเงิน (Financial)",
+                "title": "การเงิน",
                 "separator": True,
                 "items": [
                     {
                         "title": "แจ้งชำระเงิน / สลิป",
                         "icon": "payments",
-                        "link": lambda request: "/admin/payments/payment/",
+                        "link": "/admin/payments/payment/",
                     },
                     {
                         "title": "ระบบแนะนำ (Affiliates)",
                         "icon": "group",
-                        "link": lambda request: "/admin/affiliates/affiliateref/",
+                        "link": "/admin/affiliates/affiliateprofile/",
                     },
                 ],
             },
             {
-                "title": "การจัดการคอร์สเรียน (Courses)",
+                "title": "คอร์สเรียน",
                 "separator": True,
                 "items": [
                     {
                         "title": "คอร์สเรียน",
                         "icon": "school",
-                        "link": lambda request: "/admin/courses/course/",
+                        "link": "/admin/courses/course/",
                     },
                     {
                         "title": "โมดูลบทเรียน",
                         "icon": "view_module",
-                        "link": lambda request: "/admin/courses/module/",
+                        "link": "/admin/courses/module/",
                     },
                     {
                         "title": "คลิปบทเรียน",
                         "icon": "play_circle",
-                        "link": lambda request: "/admin/courses/lesson/",
+                        "link": "/admin/courses/lesson/",
                     },
                     {
-                        "title": "สิทธิ์การเข้าเรียน (Enrollments)",
+                        "title": "สิทธิ์การเข้าเรียน",
                         "icon": "assignment_ind",
-                        "link": lambda request: "/admin/courses/enrollment/",
+                        "link": "/admin/courses/enrollment/",
                     },
                 ],
             },
             {
-                "title": "ผู้ใช้งาน & สนับสนุน (Users & Support)",
+                "title": "ผู้ใช้งาน & สนับสนุน",
                 "separator": True,
                 "items": [
                     {
                         "title": "ผู้ใช้งานทั้งหมด",
                         "icon": "person",
-                        "link": lambda request: "/admin/users/user/",
+                        "link": "/admin/users/user/",
                     },
                     {
-                        "title": "ตั๋วขอความช่วยเหลือ (Tickets)",
+                        "title": "ตั๋วขอความช่วยเหลือ",
                         "icon": "confirmation_number",
-                        "link": lambda request: "/admin/support/ticket/",
+                        "link": "/admin/support/supportticket/",
                     },
                 ],
             },
