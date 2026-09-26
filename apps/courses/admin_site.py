@@ -1,19 +1,20 @@
 from django.contrib import admin
 from django.urls import path
 from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
+from django.db.models import Sum
 from courses.models import Course, Module, Lesson, Enrollment
 from payments.models import Payment
 from users.models import User
 
 class RyuCustomAdminSite(admin.AdminSite):
     """
-    Custom AdminSite for RyuClass Single-Page Management (HTMX + TailwindAdmin-1.0.0).
+    Custom AdminSite for RyuClass Single-Page Management Dashboard (TailwindAdmin-1.0.0 + HTMX).
     Wraps ALL custom views with self.admin_view() to guarantee Django Admin authentication & permissions.
     """
-    site_header = "RyuClass Single-Page Backend"
-    site_title = "RyuClass Custom Admin"
-    index_title = "จัดการคอร์สเรียนและบทเรียน"
+    site_header = "RyuClass Admin Portal"
+    site_title = "RyuClass Admin Dashboard"
+    index_title = "แดชบอร์ดบริหารจัดการ RyuClass"
 
     def get_urls(self):
         """
@@ -47,12 +48,18 @@ class RyuCustomAdminSite(admin.AdminSite):
     def dashboard_view(self, request):
         """
         Main Single-Page Management Feed.
-        Displays KPI metrics and the interactive Course Feed in TailwindAdmin style.
+        Displays KPI metrics, Recent Payment Slips Table, Recent Students, and Course Management Feed.
         """
         courses = Course.objects.prefetch_related('modules__lessons').all().order_by('sort_order', '-id')
         total_students = User.objects.filter(role='student').count()
         total_courses = Course.objects.filter(is_active=True).count()
         pending_payments = Payment.objects.filter(status='pending').count()
+        
+        revenue_agg = Payment.objects.filter(status='approved').aggregate(total=Sum('amount'))
+        total_revenue = revenue_agg['total'] or 0
+
+        recent_payments = Payment.objects.select_related('user', 'course').order_by('-submitted_at')[:6]
+        recent_students = User.objects.filter(role='student').order_by('-created_at')[:5]
 
         context = {
             **self.each_context(request),
@@ -60,7 +67,10 @@ class RyuCustomAdminSite(admin.AdminSite):
             'total_students': f"{total_students:,}",
             'total_courses': f"{total_courses:,}",
             'pending_payments': f"{pending_payments:,}",
-            'title': 'จัดการคอร์สเรียนและบทเรียน (Single-Page Management)',
+            'total_revenue': f"฿{total_revenue:,.0f}",
+            'recent_payments': recent_payments,
+            'recent_students': recent_students,
+            'title': 'แดชบอร์ดผู้ดูแลระบบ RyuClass (Single-Page Dashboard)',
         }
         return render(request, 'custom_admin/dashboard.html', context)
 
