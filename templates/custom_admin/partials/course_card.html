@@ -6,9 +6,9 @@
       <div class="flex items-center gap-3">
         <h3 class="text-base font-bold text-dark dark:text-white">{{ course.title }}</h3>
         {% if course.is_active %}
-          <span class="bg-lightsuccess text-success text-[10px] font-bold px-2.5 py-0.5 rounded-full">เปิดสอน</span>
+          <span class="bg-lightsuccess text-success text-[10px] font-bold px-3 py-1 rounded-full">เปิดสอน</span>
         {% else %}
-          <span class="bg-lightdanger text-danger text-[10px] font-bold px-2.5 py-0.5 rounded-full">ปิดอยู่</span>
+          <span class="bg-lightdanger text-danger text-[10px] font-bold px-3 py-1 rounded-full">ปิดอยู่</span>
         {% endif %}
       </div>
       <p class="text-xs text-muted font-medium mt-1">ราคา: <strong class="text-primary font-bold">฿{{ course.price|floatformat:0 }}</strong></p>
@@ -21,7 +21,7 @@
         hx-get="/admin/htmx/course/{{ course.id }}/edit/" 
         hx-target="#course-card-{{ course.id }}" 
         hx-swap="outerHTML"
-        class="px-3.5 py-1.5 text-xs font-semibold bg-lightprimary text-primary hover:bg-primary hover:text-white rounded-lg transition-all flex items-center gap-1 cursor-pointer">
+        class="px-4 py-2 text-xs font-semibold bg-lightprimary text-primary hover:bg-primary hover:text-white rounded-full transition-all flex items-center gap-1.5 cursor-pointer shadow-xs">
         <iconify-icon icon="solar:pen-linear" class="text-sm"></iconify-icon>
         <span>แก้ไข</span>
       </button>
@@ -32,7 +32,7 @@
         hx-target="#course-card-{{ course.id }}" 
         hx-swap="outerHTML"
         hx-confirm="คุณแน่ใจหรือไม่ว่าต้องการลบคอร์สนี้และบทเรียนย่อยทั้งหมด?"
-        class="px-3.5 py-1.5 text-xs font-semibold bg-lightdanger text-danger hover:bg-danger hover:text-white rounded-lg transition-all flex items-center gap-1 cursor-pointer">
+        class="px-4 py-2 text-xs font-semibold bg-lightdanger text-danger hover:bg-danger hover:text-white rounded-full transition-all flex items-center gap-1.5 cursor-pointer shadow-xs">
         <iconify-icon icon="solar:trash-bin-trash-linear" class="text-sm"></iconify-icon>
         <span>ลบ</span>
       </button>
@@ -49,7 +49,7 @@
         hx-post="/admin/htmx/course/{{ course.id }}/lesson/create/" 
         hx-target="#lesson-list-{{ course.id }}" 
         hx-swap="beforeend"
-        class="text-xs font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer">
+        class="text-xs font-semibold text-primary hover:underline px-3 py-1 rounded-full bg-lightprimary hover:bg-primary hover:text-white transition-all flex items-center gap-1 cursor-pointer">
         <iconify-icon icon="solar:add-circle-linear" class="text-sm"></iconify-icon>
         <span>+ เพิ่มบทเรียน</span>
       </button>

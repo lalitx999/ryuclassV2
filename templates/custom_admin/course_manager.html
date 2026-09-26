@@ -1,0 +1,39 @@
+{% extends "custom_admin/base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Action Header -->
+  <div class="card rounded-2xl border border-border dark:border-darkborder bg-white dark:bg-dark p-6 shadow-xs flex flex-wrap justify-between items-center gap-4">
+    <div>
+      <h2 class="text-lg font-bold text-dark dark:text-white flex items-center gap-2">
+        <iconify-icon icon="solar:music-note-linear" class="text-primary text-2xl"></iconify-icon>
+        <span>จัดการคอร์สเรียนและบทเรียน (Single-Page Feed Manager)</span>
+      </h2>
+      <p class="text-xs text-muted mt-1">คลิกเพิ่ม/แก้ไข/ลบ คอร์สเรียนและคลิปบทเรียนแบบ Inline ได้ทันที จบในหน้าเดียวโดยไม่ต้องเปลี่ยนหน้า</p>
+    </div>
+
+    <!-- Inline Add Course Button with Soft Rounded Styling -->
+    <button 
+      hx-post="/admin/htmx/course/create/" 
+      hx-target="#course-feed" 
+      hx-swap="afterbegin"
+      class="bg-primary hover:bg-primary/90 text-white font-semibold text-xs px-6 py-3 rounded-full shadow-md shadow-primary/25 hover:scale-[1.02] transition-all flex items-center gap-2 cursor-pointer">
+      <iconify-icon icon="solar:add-circle-linear" class="text-lg"></iconify-icon>
+      <span>เพิ่มคอร์สเรียนใหม่</span>
+    </button>
+  </div>
+
+  <!-- Dynamic Course Feed Container -->
+  <div id="course-feed" class="space-y-6">
+    {% for course in courses %}
+      {% include "custom_admin/partials/course_card.html" with course=course %}
+    {% empty %}
+      <div class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-12 text-center text-muted text-sm">
+        ยังไม่มีคอร์สเรียนในระบบ กดปุ่ม "เพิ่มคอร์สเรียนใหม่" ด้านบนเพื่อเริ่มต้นสร้างคอร์สแรกได้ทันที
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

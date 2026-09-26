@@ -21,19 +21,30 @@ class RyuCustomAdminSite(admin.AdminSite):
         Register custom endpoints for HTMX Single-Page Management.
         All custom views are wrapped in self.admin_view() for security.
         """
+        # Ensure all models from standard admin site are registered to custom_admin_site
+        for model, model_admin in admin.site._registry.items():
+            if model not in self._registry:
+                try:
+                    self.register(model, model_admin.__class__)
+                except Exception:
+                    pass
+
         urls = super().get_urls()
         custom_urls = [
-            # 1. Main Single-Page Management Feed Dashboard
+            # 1. Main Dashboard (Clean Overview: Banner + 6 KPI Cards + Recent Slips QC + Recent Students)
             path('', self.admin_view(self.dashboard_view), name='index'),
 
-            # 2. HTMX Endpoints for Courses (Single-Page Feed Swapping)
+            # 2. Dedicated Single-Page Course & Lesson Manager Page
+            path('courses/manage/', self.admin_view(self.course_manager_view), name='course_manager'),
+
+            # 3. HTMX Endpoints for Courses (Single-Page Feed Swapping)
             path('htmx/course/<int:course_id>/card/', self.admin_view(self.course_card_view), name='htmx_course_card'),
             path('htmx/course/<int:course_id>/edit/', self.admin_view(self.course_edit_form_view), name='htmx_course_edit'),
             path('htmx/course/<int:course_id>/save/', self.admin_view(self.course_save_view), name='htmx_course_save'),
             path('htmx/course/create/', self.admin_view(self.course_create_view), name='htmx_course_create'),
             path('htmx/course/<int:course_id>/delete/', self.admin_view(self.course_delete_view), name='htmx_course_delete'),
 
-            # 3. HTMX Endpoints for Lessons
+            # 4. HTMX Endpoints for Lessons
             path('htmx/lesson/<int:lesson_id>/edit/', self.admin_view(self.lesson_edit_view), name='htmx_lesson_edit'),
             path('htmx/lesson/<int:lesson_id>/save/', self.admin_view(self.lesson_save_view), name='htmx_lesson_save'),
             path('htmx/lesson/<int:lesson_id>/delete/', self.admin_view(self.lesson_delete_view), name='htmx_lesson_delete'),
@@ -47,10 +58,9 @@ class RyuCustomAdminSite(admin.AdminSite):
 
     def dashboard_view(self, request):
         """
-        Main Single-Page Management Feed.
-        Displays KPI metrics, Recent Payment Slips Table, Recent Students, and Course Management Feed.
+        Clean Overview Dashboard.
+        Displays Welcome Banner, 6 KPI Counter Cards, Recent Payments QC Table, and Recent Registered Students.
         """
-        courses = Course.objects.prefetch_related('modules__lessons').all().order_by('sort_order', '-id')
         total_students = User.objects.filter(role='student').count()
         total_courses = Course.objects.filter(is_active=True).count()
         pending_payments = Payment.objects.filter(status='pending').count()
@@ -63,16 +73,28 @@ class RyuCustomAdminSite(admin.AdminSite):
 
         context = {
             **self.each_context(request),
-            'courses': courses,
             'total_students': f"{total_students:,}",
             'total_courses': f"{total_courses:,}",
             'pending_payments': f"{pending_payments:,}",
             'total_revenue': f"฿{total_revenue:,.0f}",
             'recent_payments': recent_payments,
             'recent_students': recent_students,
-            'title': 'แดชบอร์ดผู้ดูแลระบบ RyuClass (Single-Page Dashboard)',
+            'title': 'แดชบอร์ดผู้ดูแลระบบ RyuClass',
         }
         return render(request, 'custom_admin/dashboard.html', context)
+
+    def course_manager_view(self, request):
+        """
+        Dedicated Single-Page Course & Lesson Management Page.
+        Clean, structured HTMX Single-Page Feed for managing courses, modules, and lessons.
+        """
+        courses = Course.objects.prefetch_related('modules__lessons').all().order_by('sort_order', '-id')
+        context = {
+            **self.each_context(request),
+            'courses': courses,
+            'title': 'จัดการคอร์สเรียนและบทเรียน (Single-Page Feed Manager)',
+        }
+        return render(request, 'custom_admin/course_manager.html', context)
 
     def course_card_view(self, request, course_id):
         """Render single course card HTML partial."""

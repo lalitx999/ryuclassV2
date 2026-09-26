@@ -2,16 +2,16 @@
       hx-post="/admin/htmx/lesson/{{ lesson.id }}/save/" 
       hx-target="#lesson-item-{{ lesson.id }}" 
       hx-swap="outerHTML"
-      class="flex items-center gap-3 bg-lightinfo/30 p-2.5 rounded-xl border border-info/40 text-xs">
-  <input type="text" name="title" value="{{ lesson.title }}" required class="flex-1 text-xs border border-border rounded-lg px-2.5 py-1.5 bg-white dark:bg-dark focus:outline-none focus:border-primary">
+      class="flex items-center gap-3 bg-lightinfo/30 p-2.5 rounded-2xl border border-info/40 text-xs">
+  <input type="text" name="title" value="{{ lesson.title }}" required class="flex-1 text-xs border border-border rounded-xl px-3 py-1.5 bg-white dark:bg-dark focus:outline-none focus:border-primary">
   
   <label class="flex items-center gap-1.5 text-xs text-dark dark:text-white cursor-pointer select-none shrink-0">
-    <input type="checkbox" name="is_free" {% if lesson.is_free %}checked{% endif %} class="rounded text-primary focus:ring-primary">
+    <input type="checkbox" name="is_free" {% if lesson.is_free %}checked{% endif %} class="rounded-md text-primary focus:ring-primary">
     <span>ทดลองฟรี</span>
   </label>
 
   <div class="flex items-center gap-1.5 shrink-0">
-    <button type="submit" class="px-3 py-1 bg-primary text-white font-semibold rounded-lg hover:bg-primary/90 transition-all cursor-pointer">
+    <button type="submit" class="px-4 py-1.5 bg-primary text-white font-semibold rounded-full hover:bg-primary/90 transition-all cursor-pointer shadow-xs">
       บันทึก
     </button>
   </div>

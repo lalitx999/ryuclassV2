@@ -1,18 +1,18 @@
-<div id="lesson-item-{{ lesson.id }}" class="flex justify-between items-center bg-lightgray dark:bg-dark p-3 rounded-xl border border-border dark:border-darkborder text-xs">
+<div id="lesson-item-{{ lesson.id }}" class="flex justify-between items-center bg-lightgray dark:bg-dark p-3 rounded-2xl border border-border dark:border-darkborder text-xs">
   <div class="flex items-center gap-2">
     <iconify-icon icon="solar:play-circle-linear" class="text-primary text-lg shrink-0"></iconify-icon>
     <span class="font-medium text-dark dark:text-white">{{ lesson.title }}</span>
     {% if lesson.is_free %}
-      <span class="bg-lightprimary text-primary text-[10px] px-2 py-0.5 rounded-full font-bold">ทดลองเรียนฟรี</span>
+      <span class="bg-lightprimary text-primary text-[10px] px-2.5 py-0.5 rounded-full font-bold">ทดลองเรียนฟรี</span>
     {% endif %}
   </div>
 
-  <div class="flex items-center gap-3">
+  <div class="flex items-center gap-2">
     <button 
       hx-get="/admin/htmx/lesson/{{ lesson.id }}/edit/" 
       hx-target="#lesson-item-{{ lesson.id }}" 
       hx-swap="outerHTML"
-      class="text-muted hover:text-primary font-medium cursor-pointer">
+      class="px-3 py-1 bg-white dark:bg-dark border border-border text-muted hover:text-primary rounded-full font-medium transition-all cursor-pointer">
       แก้ไข
     </button>
     <button 
@@ -20,7 +20,7 @@
       hx-target="#lesson-item-{{ lesson.id }}" 
       hx-swap="outerHTML"
       hx-confirm="ลบบทเรียนนี้?"
-      class="text-muted hover:text-danger font-medium cursor-pointer">
+      class="px-3 py-1 bg-white dark:bg-dark border border-border text-muted hover:text-danger rounded-full font-medium transition-all cursor-pointer">
       ลบ
     </button>
   </div>
