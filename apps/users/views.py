@@ -116,6 +116,21 @@ class RegisterView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Validate current database pricing before creating an account or saving a slip.
+        from courses.pricing import package_amount
+        from decimal import Decimal, InvalidOperation
+        course_map = {'N5': 1, 'N4': 2, 'N3': 3, 'N2': 4, 'N1': 5}
+        if level not in course_map:
+            return Response({'error': 'ระดับคอร์สไม่ถูกต้อง'}, status=400)
+        try:
+            course = Course.objects.get(pk=course_map[level], is_active=True)
+            amount = package_amount(course, int(duration))
+            expected = Decimal(str(request.data.get('expected_amount', '')))
+            if not expected.is_finite() or expected != amount:
+                return Response({'error': 'ราคาเปลี่ยนแล้ว กรุณาปิดแล้วเปิดฟอร์มสมัครใหม่ ตรวจสอบยอดก่อนโอนเงิน'}, status=409)
+        except (Course.DoesNotExist, ValueError, TypeError, InvalidOperation):
+            return Response({'error': 'คอร์สหรือราคาแพ็กเกจไม่พร้อม กรุณาโหลดฟอร์มสมัครใหม่'}, status=400)
+
         try:
             # 1. Create user
             user = User.objects.create_user(
@@ -127,23 +142,6 @@ class RegisterView(APIView):
                 role='student'
             )
 
-            # 2. Get Course ID mapping
-            course_map = {'N5': 1, 'N4': 2, 'N3': 3, 'N2': 4, 'N1': 5}
-            course_id = course_map.get(level, 1)
-            try:
-                course = Course.objects.get(id=course_id)
-            except Course.DoesNotExist:
-                return Response({'error': 'ไม่พบคอร์สเรียนที่เลือก'}, status=status.HTTP_400_BAD_REQUEST)
-
-            # 3. Calculate Amount
-            price_matrix = {
-                'N5': {30: 1000.0, 180: 5000.0, 365: 9000.0, 9999: 10000.0},
-                'N4': {30: 1250.0, 180: 6500.0, 365: 12000.0, 9999: 20000.0},
-                'N3': {30: 1500.0, 180: 8000.0, 365: 15000.0, 9999: 30000.0},
-                'N2': {30: 1750.0, 180: 9500.0, 365: 18000.0, 9999: 40000.0},
-                'N1': {30: 2000.0, 180: 11000.0, 365: 21000.0, 9999: 50000.0},
-            }
-            amount = price_matrix.get(level, {}).get(int(duration), 1000.0)
 
             # 4. Save Slip File
             ext = os.path.splitext(slip_file.name)[1] or '.jpg'
