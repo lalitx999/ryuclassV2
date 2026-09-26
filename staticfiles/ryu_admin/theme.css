@@ -1,0 +1,191 @@
+/* RyuClass: retain Django's layout and widget contracts, style its public hooks. */
+:root, html[data-theme="light"], html[data-theme="dark"] {
+  color-scheme: light;
+  --primary: #315cce; --secondary: #183060; --accent: #fff;
+  --primary-fg: #fff; --body-fg: #24334b; --body-bg: #f5f7fb;
+  --body-quiet-color: #617087; --body-medium-color: #45546c; --body-loud-color: #17253e;
+  --header-color: #fff; --header-branding-color: #fff; --header-bg: #152747; --header-link-color: #fff;
+  --breadcrumbs-fg: #607088; --breadcrumbs-link-fg: #315cce; --breadcrumbs-bg: #fff;
+  --link-fg: #315cce; --link-hover-color: #183d9f; --link-selected-fg: #234cbb;
+  --hairline-color: #e9edf4; --border-color: #dbe2ed; --darkened-bg: #f1f4f9;
+  --selected-bg: #e9effc; --selected-row: #edf2ff;
+  --button-fg: #fff; --button-bg: #315cce; --button-hover-bg: #2449ad;
+  --default-button-bg: #315cce; --default-button-hover-bg: #2449ad;
+  --close-button-bg: #64748b; --close-button-hover-bg: #475569;
+  --delete-button-bg: #b42332; --delete-button-hover-bg: #921c29;
+  --message-success-bg: #eaf7ee; --message-warning-bg: #fff5dc; --message-error-bg: #fff0f0;
+  --error-fg: #b42332;
+  --font-family-primary: -apple-system, BlinkMacSystemFont, "Thonburi", "Noto Sans Thai", "Segoe UI", sans-serif;
+}
+body { font-size: 14px; line-height: 1.6; }
+a, button, input, select, textarea { transition: border-color .15s, background-color .15s; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #91acf2; outline-offset: 3px; }
+#header { padding: 18px 30px; min-height: 42px; box-sizing: content-box; }
+.ryu-brand { display: inline-flex; align-items: center; gap: 12px; color: #fff !important; font-size: 23px; font-weight: 700; line-height: 1.25; text-decoration: none; }
+.ryu-brand-mark { display: grid; place-items: center; width: 41px; height: 41px; border-radius: 12px; background: #456fe3; font-size: 25px; }
+.ryu-brand small { display: block; color: #a9bcdf; font-size: 9px; letter-spacing: 2px; margin-top: 4px; }
+#user-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; font-size: 12px; text-transform: none; letter-spacing: 0; }
+#user-tools a, #logout-form button { border: 0; font-size: 12px; }
+.ryu-user { color: #b8c8e3; padding-right: 12px; border-right: 1px solid #435372; }
+#logout-form button { padding: 7px 11px; border: 1px solid #52617d; border-radius: 7px; }
+div.breadcrumbs { padding: 13px 30px; border-bottom: 1px solid var(--border-color); font-size: 12px; }
+#content { padding: 30px; }
+#content h1 { color: #17253e; font-size: 25px; font-weight: 650; margin-bottom: 22px; }
+#content h2 { font-size: 16px; }
+#nav-sidebar { background: #fff; border-right-color: #e0e6f0; }
+#nav-sidebar .module { background: transparent; margin-bottom: 12px; }
+#nav-sidebar .module caption { background: transparent; padding: 14px 18px 7px; font-size: 11px; font-weight: 650; }
+#nav-sidebar .module caption a, #nav-sidebar .current-app .section:link, #nav-sidebar .current-app .section:visited { color: #6d7a90; }
+#nav-sidebar th { padding: 8px 18px; border: 0; font-size: 13px; font-weight: 400; }
+#nav-sidebar th a { display: block; color: #3e4f6a; }
+#nav-sidebar tr:hover { background: #f4f7fd; }
+#nav-sidebar .current-model { background: #eaf0ff; box-shadow: inset 3px 0 #315cce; }
+#nav-sidebar .current-model a { color: #254fbe; font-weight: 650; }
+#nav-filter { width: calc(100% - 28px); margin: 18px 14px 6px; padding: 10px 12px; border-radius: 8px; background: #f5f7fb; }
+.toggle-nav-sidebar { background: #fff; }
+.module { border-radius: 10px; background: #fff; }
+.module h2, .module caption, .inline-group h2 { background: #edf2fa; color: #34496b; padding: 12px 16px; font-size: 13px; }
+.module caption a.section { color: #34496b; }
+.module table { width: 100%; }
+#changelist { border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: #fff; }
+#changelist .changelist-form-container { min-width: 0; }
+#changelist #toolbar { padding: 17px 18px; background: #fff; border-bottom: 1px solid var(--hairline-color); }
+#changelist #toolbar form input[type="text"] { padding: 9px 12px; }
+#changelist .actions { padding: 12px 18px; background: #f8faff; border-bottom: 1px solid var(--hairline-color); }
+#changelist .actions select { height: auto; padding: 7px; max-width: 100%; }
+#changelist .actions .button, #changelist #toolbar form input[type="submit"] { padding: 8px 14px; border-radius: 6px; height: auto; }
+#changelist table thead th { padding: 11px 10px; background: #f1f4f9; color: #53627a; font-size: 12px; }
+#changelist table tbody td, #changelist table tbody th { padding: 13px 10px; font-size: 13px; vertical-align: middle; }
+#changelist table tbody tr { background: #fff; }
+#changelist table tbody tr:nth-child(even) { background: #fbfcfe; }
+#changelist table tbody tr:hover { background: #f0f5ff; }
+#changelist table tbody tr.selected { background: var(--selected-row); }
+#changelist-filter { background: #f9fbfe; border-left: 1px solid var(--border-color); }
+#changelist-filter h2 { background: #edf2fa; color: #34496b; padding: 16px; }
+#changelist-filter h3 { font-size: 13px; }
+#changelist-filter li.selected { border-left-color: #315cce; }
+#changelist .paginator { background: #fff; padding: 16px 18px; }
+.object-tools a:link, .object-tools a:visited { background-color: #315cce; border-radius: 7px; padding: 10px 17px; text-transform: none; font-weight: 600; }
+input[type="text"], input[type="password"], input[type="email"], input[type="number"], input[type="url"], input[type="date"], input[type="time"], select, textarea { border: 1px solid #cdd7e6; border-radius: 7px; padding: 9px 11px; background: #fff; color: #24334b; box-sizing: border-box; }
+textarea { max-width: 100%; }
+input[type="checkbox"] { accent-color: #315cce; }
+.button, input[type="submit"], input[type="button"], .submit-row input, a.button { border-radius: 7px; padding: 11px 17px; }
+fieldset.module { border: 1px solid var(--border-color); margin-bottom: 22px; }
+.form-row { padding: 17px 20px; }
+.aligned label { color: #42536d; }
+.help, p.help, .form-row p.help { color: #64738a; font-size: 12px; }
+.submit-row { border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; background: #fff; gap: 10px; }
+.submit-row a.deletelink { border-radius: 7px; }
+.inline-group { border-radius: 10px; border-color: var(--border-color); }
+.inline-group .tabular { overflow-x: auto; }
+.selector { max-width: 100%; }
+ul.messagelist li { padding: 15px 40px; border-bottom: 1px solid var(--border-color); }
+.ryu-page-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
+.ryu-eyebrow { color: #637aa9; letter-spacing: 1.8px; font-size: 10px; font-weight: 650; margin: 0 0 8px; }
+.ryu-page-heading h1 { margin: 0 0 8px !important; font-size: 28px !important; }
+.ryu-page-heading p:last-child { color: #63718a; margin: 0; }
+.ryu-date { padding: 7px 12px; border: 1px solid #dde4ef; border-radius: 7px; background: #fff; font-size: 12px; white-space: nowrap; color: #64738a; }
+.ryu-quick-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 32px; }
+.ryu-quick { display: flex; flex-direction: column; position: relative; border: 1px solid #dfe6f1; border-radius: 12px; background: #fff; padding: 22px; color: #64738a !important; font-size: 12px; }
+.ryu-quick:hover { border-color: #8ca7e9; background: #fafdff; }
+.ryu-quick-icon { display: grid; place-items: center; width: 36px; height: 36px; background: #edf2ff; color: #315cce; border-radius: 10px; font-size: 22px; margin-bottom: 16px; }
+.ryu-quick-title { font-size: 16px; font-weight: 650; color: #203654; margin-bottom: 6px; }
+.ryu-quick-arrow { position: absolute; top: 25px; right: 22px; font-size: 20px; }
+.ryu-quick-primary { background: #315cce; border-color: #315cce; color: #dde6ff !important; }
+.ryu-quick-primary:hover { background: #284fb8; }
+.ryu-quick-primary .ryu-quick-title { color: #fff; }
+.ryu-quick-primary .ryu-quick-icon { background: #ffffff20; color: #fff; }
+.ryu-workspace-grid { display: grid; grid-template-columns: minmax(0, 1fr) 245px; gap: 24px; align-items: start; }
+.ryu-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+.ryu-section-heading h2 { margin: 0; font-weight: 650; }
+.ryu-section-heading span, .ryu-muted { color: #728097; font-size: 12px; }
+.ryu-module-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.ryu-module { background: #fff; border: 1px solid #dfe6f1; border-radius: 12px; overflow: hidden; }
+.ryu-module-heading { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid #edf0f6; }
+.ryu-module-heading h3 { margin: 0; font-size: 14px; font-weight: 650; }
+.ryu-module-heading h3 a { color: #253b5c; }
+.ryu-module-heading > span { border-radius: 6px; background: #f0f3f9; padding: 1px 7px; font-size: 11px; color: #728097; }
+.ryu-module ul, .ryu-activity ul { list-style: none; padding: 0; margin: 0; }
+.ryu-module li { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 11px 18px; border-bottom: 1px solid #f0f3f8; font-size: 13px; }
+.ryu-module li:last-child { border: 0; }
+.ryu-module li:hover { background: #f8faff; }
+.ryu-module li > span { flex: 1; min-width: 0; }
+.ryu-module li > span a { color: #42536d; display: block; }
+.ryu-row-arrow { color: #94a3bc; margin-left: 4px; }
+.ryu-add { color: #315cce; white-space: nowrap; font-size: 11px; padding: 4px 7px; border-radius: 5px; background: #f0f4ff; }
+.ryu-activity { border: 1px solid #dfe6f1; border-radius: 12px; background: #fff; padding: 20px; }
+.ryu-activity h2 { font-size: 14px !important; margin: 0 0 5px; }
+.ryu-activity li { list-style: none; display: flex; gap: 10px; padding: 14px 0; border-bottom: 1px solid #eef2f7; overflow-wrap: anywhere; }
+.ryu-activity li:last-child { border: 0; }
+.ryu-activity small { display: block; font-size: 11px; color: #7c889b; margin-top: 5px; }
+.ryu-activity-dot { width: 7px; height: 7px; border-radius: 50%; background: #7394e3; flex-shrink: 0; margin-top: 8px; }
+.ryu-activity .ryu-empty { display: block; color: #6e7d94; padding: 24px 0; }
+body.login { background: #eef2f9; min-height: 100vh; }
+.login #container { width: 440px; max-width: calc(100% - 32px); min-width: 0; margin: 9vh auto 30px; border: 1px solid #dae2ef; border-radius: 18px; box-shadow: 0 18px 55px #1830600c; overflow: hidden; background: #fff; }
+.login #header { padding: 25px 32px; justify-content: flex-start; }
+.login #content { padding: 30px 32px 20px; }
+.ryu-login-heading { margin-bottom: 25px; }
+.ryu-login-heading h1 { font-size: 24px !important; margin-bottom: 9px !important; }
+.ryu-login-heading p:last-child { color: #758199; font-size: 13px; }
+.login .form-row { padding: 9px 0; }
+.login .form-row label { font-size: 13px; margin-bottom: 7px; }
+.login .form-row #id_username, .login .form-row #id_password { width: 100%; padding: 12px; border-radius: 8px; }
+.login .submit-row { padding: 16px 0 0; border: 0; margin: 0; display: block; }
+.login .submit-row input { width: 100%; padding: 13px; font-size: 14px; }
+.ryu-login-footer { text-align: center; padding: 0 20px 24px; color: #8591a4; font-size: 11px; }
+@media (min-width: 768px) and (max-width: 1200px) { .ryu-workspace-grid { grid-template-columns: 1fr; } .ryu-activity { margin-top: 4px; } }
+@media (max-width: 767px) {
+  #header { padding: 16px 20px; gap: 18px; }
+  #user-tools { justify-content: center; gap: 12px; margin: 0; }
+  .ryu-user { display: none; }
+  div.breadcrumbs { padding: 12px 20px; }
+  #content { padding: 20px 16px; }
+  .ryu-page-heading { align-items: flex-start; }
+  .ryu-page-heading h1 { font-size: 24px !important; }
+  .ryu-date { display: none; }
+  .ryu-quick-grid, .ryu-workspace-grid, .ryu-module-grid { grid-template-columns: 1fr; }
+  .ryu-quick-grid { gap: 10px; margin-bottom: 24px; }
+  .ryu-quick { padding: 17px 20px; }
+  .ryu-quick-icon { margin-bottom: 10px; }
+  .ryu-section-heading span { display: none; }
+  #changelist .actions label { max-width: 100%; }
+  #changelist-filter { border-left: 0; }
+  .form-row { padding: 14px; }
+  .submit-row { flex-wrap: wrap; }
+  .login #container { margin-top: 5vh; }
+  .login #content { padding: 25px 24px 16px; }
+  .login #header { padding: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+/* Django's tablet stylesheet fixes header height; allow wrapped account controls. */
+#header { height: auto; }
+#nav-sidebar tbody tr { background: transparent; }
+#nav-sidebar tbody tr:hover { background: #f4f7fd; }
+#nav-sidebar tbody tr.current-model { background: #eaf0ff; }
+@media (min-width: 768px) and (max-width: 1050px) {
+  .ryu-quick-grid, .ryu-module-grid { grid-template-columns: 1fr; }
+  .ryu-quick { padding: 18px 20px; }
+  .ryu-quick-icon { margin-bottom: 10px; }
+  .ryu-section-heading span { display: none; }
+  #header { gap: 16px; }
+}
+#changelist #toolbar form input[type="text"] { height: auto; min-height: 38px; }
+select:not([multiple]) { height: auto; min-height: 38px; }
+#header, #container > nav { flex-shrink: 0; }
+@media (max-width: 767px) {
+  #changelist .actions { width: 100%; box-sizing: border-box; flex-wrap: wrap; gap: 8px; }
+  #changelist .actions label { min-width: 0; flex: 1 1 180px; }
+  #changelist .actions select { min-width: 0; width: auto; flex: 1; }
+  #changelist .actions .action-counter { flex-basis: 100%; }
+}
+.form-row .flex-container { min-width: 0; }
+.form-row .readonly, .form-row .help { overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+  .aligned .form-row > div, .aligned .form-row .flex-container > div { min-width: 0; max-width: 100%; }
+  .aligned .form-row .help { margin-left: 0; padding-left: 0; }
+}
+#changelist .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#changelist .actions label { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+#changelist .actions select { min-width: 0; max-width: min(420px, 100%); flex: 1; }
+#changelist .actions .action-counter { white-space: nowrap; }
+#changelist td.field-course, #changelist td.field-user { white-space: normal; min-width: 130px; max-width: 230px; }

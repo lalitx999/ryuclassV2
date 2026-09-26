@@ -1,26 +1,29 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from unfold.admin import ModelAdmin, TabularInline
+from unfold.decorators import display
 from .models import User
 from courses.models import Enrollment
 from courses.services import AccessService
 
-class EnrollmentInline(admin.TabularInline):
+class EnrollmentInline(TabularInline):
     model = Enrollment
     extra = 1
     fields = ('course', 'status', 'is_active', 'is_lifetime_video', 'video_expires_at', 'zoom_expires_at')
     autocomplete_fields = ('course',)
 
-class UserAdmin(BaseUserAdmin):
+@admin.register(User)
+class UserAdmin(BaseUserAdmin, ModelAdmin):
     ordering = ('email',)
-    list_display = ('email', 'name', 'role', 'total_spent', 'is_staff', 'is_active')
+    list_display = ('email', 'name', 'role_badge', 'total_spent_display', 'is_staff', 'is_active_badge')
     list_filter = ('role', 'is_staff', 'is_superuser', 'is_active')
     inlines = [EnrollmentInline]
     
     fieldsets = (
-        (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('name',)}),
-        ('Permissions', {'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        ('RyuClass Profile', {'fields': ('total_spent', 'is_affiliate')}),
+        ("เข้าสู่ระบบ & บัญชี", {'fields': ('email', 'password')}),
+        ("ข้อมูลส่วนตัว", {'fields': ('name', 'nickname', 'phone', 'telegram_chat_id')}),
+        ("สิทธิ์ในระบบ", {'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ("ข้อมูล RyuClass", {'fields': ('total_spent', 'is_affiliate', 'email_verified')}),
     )
     add_fieldsets = (
         (None, {
@@ -28,9 +31,31 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('email', 'name', 'role', 'password'),
         }),
     )
-    search_fields = ('email', 'name')
+    search_fields = ('email', 'name', 'phone')
     filter_horizontal = ('groups', 'user_permissions')
     actions = ['send_broadcast_email_action']
+
+    @display(
+        description="บทบาท",
+        label={
+            "admin": "danger",
+            "student": "info",
+        }
+    )
+    def role_badge(self, obj):
+        labels = {"admin": "ผู้ดูแลระบบ (Admin)", "student": "นักเรียน (Student)"}
+        return labels.get(obj.role, obj.role)
+
+    @display(
+        description="สถานะบัญชี",
+        boolean=True,
+    )
+    def is_active_badge(self, obj):
+        return obj.is_active
+
+    @display(description="ยอดซื้อสะสม")
+    def total_spent_display(self, obj):
+        return f"฿{obj.total_spent:,.2f}"
 
     @admin.action(description='📧 บรอดแคสต์ส่งอีเมลหาผู้ใช้ที่เลือก (Hostinger SMTP)')
     def send_broadcast_email_action(self, request, queryset):
@@ -57,10 +82,5 @@ class UserAdmin(BaseUserAdmin):
         self.message_user(request, f"ส่งอีเมลบรอดแคสต์สำเร็จแล้ว {success_count}/{len(recipients)} รายชื่อ")
 
     def save_model(self, request, obj, form, change):
-        # Save user object
         super().save_model(request, obj, form, change)
-        
-        # When user's total_spent or other details are saved/modified, recalculate their lifetime unlocks
         AccessService.recalculate_lifetime_unlocks(obj.id)
-
-admin.site.register(User, UserAdmin)

@@ -1,19 +1,32 @@
 from django.contrib import admin, messages
+from unfold.admin import ModelAdmin, TabularInline
+from unfold.decorators import display
 from .models import Post, PostImage, PostLike, Comment
 
-class PostImageInline(admin.TabularInline):
+class PostImageInline(TabularInline):
     model = PostImage
     extra = 0
     fields = ('image_url', 'sort_order', 'created_at')
     readonly_fields = ('created_at',)
 
 @admin.register(Post)
-class PostAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'category', 'user', 'moderation_status', 'views_count', 'likes_count', 'created_at')
+class PostAdmin(ModelAdmin):
+    list_display = ('id', 'title', 'category', 'user', 'moderation_badge', 'views_count', 'likes_count', 'created_at')
     list_filter = ('category', 'moderation_status', 'created_at')
     search_fields = ('title', 'content', 'user__email', 'user__name')
     inlines = [PostImageInline]
     actions = ['approve_posts', 'reject_posts']
+
+    @display(
+        description="สถานะตรวจสอบ",
+        label={
+            "APPROVED": "success",
+            "PENDING": "warning",
+            "REJECTED": "danger",
+        }
+    )
+    def moderation_badge(self, obj):
+        return obj.moderation_status
 
     @admin.action(description="✅ อนุมัติกระทู้ (Approve selected posts)")
     def approve_posts(self, request, queryset):
@@ -25,13 +38,26 @@ class PostAdmin(admin.ModelAdmin):
         updated = queryset.update(moderation_status='REJECTED')
         self.message_user(request, f"ปฏิเสธกระทู้เรียบร้อยแล้ว {updated} รายการ", messages.WARNING)
 
+
 @admin.register(Comment)
-class CommentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'post', 'user', 'moderation_status', 'created_at')
+class CommentAdmin(ModelAdmin):
+    list_display = ('id', 'post', 'user', 'moderation_badge', 'created_at')
     list_filter = ('moderation_status', 'created_at')
     search_fields = ('content', 'user__email', 'post__title')
 
+    @display(
+        description="สถานะตรวจสอบ",
+        label={
+            "APPROVED": "success",
+            "PENDING": "warning",
+            "REJECTED": "danger",
+        }
+    )
+    def moderation_badge(self, obj):
+        return obj.moderation_status
+
+
 @admin.register(PostLike)
-class PostLikeAdmin(admin.ModelAdmin):
+class PostLikeAdmin(ModelAdmin):
     list_display = ('id', 'post', 'user', 'created_at')
     search_fields = ('user__email', 'post__title')

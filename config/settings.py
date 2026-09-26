@@ -20,6 +20,9 @@ ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
+    'unfold',
+    'unfold.contrib.filters',
+    'unfold.contrib.forms',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,6 +44,93 @@ INSTALLED_APPS = [
     'system_config.apps.SystemConfigConfig',
     'community.apps.CommunityConfig',
 ]
+
+UNFOLD = {
+    "SITE_TITLE": "RyuClass Admin",
+    "SITE_HEADER": "RyuClass Admin Portal",
+    "SITE_URL": "/",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": False,
+    "DASHBOARD_CALLBACK": "config.dashboard.dashboard_callback",
+    "STYLES": [
+        lambda request: "https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/1.39.1/iconfont/tabler-icons.min.css",
+    ],
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+        "navigation": [
+            {
+                "title": "แดชบอร์ดหลัก (Dashboard)",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "หน้าแรกแดชบอร์ด",
+                        "icon": "dashboard",
+                        "link": lambda request: "/admin/",
+                    },
+                ],
+            },
+            {
+                "title": "การจัดการการเงิน (Financial)",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "แจ้งชำระเงิน / สลิป",
+                        "icon": "payments",
+                        "link": lambda request: "/admin/payments/payment/",
+                    },
+                    {
+                        "title": "ระบบแนะนำ (Affiliates)",
+                        "icon": "group",
+                        "link": lambda request: "/admin/affiliates/affiliateref/",
+                    },
+                ],
+            },
+            {
+                "title": "การจัดการคอร์สเรียน (Courses)",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "คอร์สเรียน",
+                        "icon": "school",
+                        "link": lambda request: "/admin/courses/course/",
+                    },
+                    {
+                        "title": "โมดูลบทเรียน",
+                        "icon": "view_module",
+                        "link": lambda request: "/admin/courses/module/",
+                    },
+                    {
+                        "title": "คลิปบทเรียน",
+                        "icon": "play_circle",
+                        "link": lambda request: "/admin/courses/lesson/",
+                    },
+                    {
+                        "title": "สิทธิ์การเข้าเรียน (Enrollments)",
+                        "icon": "assignment_ind",
+                        "link": lambda request: "/admin/courses/enrollment/",
+                    },
+                ],
+            },
+            {
+                "title": "ผู้ใช้งาน & สนับสนุน (Users & Support)",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "ผู้ใช้งานทั้งหมด",
+                        "icon": "person",
+                        "link": lambda request: "/admin/users/user/",
+                    },
+                    {
+                        "title": "ตั๋วขอความช่วยเหลือ (Tickets)",
+                        "icon": "confirmation_number",
+                        "link": lambda request: "/admin/support/ticket/",
+                    },
+                ],
+            },
+        ],
+    },
+}
 
 
 MIDDLEWARE = [
@@ -128,7 +218,7 @@ admin_lte_path = BASE_DIR.parent / 'AdminLTE-3.1.0'
 if admin_lte_path.exists():
     STATICFILES_DIRS.append(admin_lte_path)
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
