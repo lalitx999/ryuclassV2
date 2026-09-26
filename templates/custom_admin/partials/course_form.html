@@ -1,0 +1,48 @@
+<form id="course-card-{{ course.id }}" 
+      hx-post="/admin/htmx/course/{{ course.id }}/save/" 
+      hx-target="#course-card-{{ course.id }}" 
+      hx-swap="outerHTML"
+      class="bg-lightwarning/40 border-2 border-warning/60 dark:bg-dark border-dashed rounded-2xl p-6 space-y-4 shadow-sm">
+  
+  <div class="flex justify-between items-center border-b border-warning/30 pb-3">
+    <span class="text-xs font-bold text-warning uppercase tracking-wider flex items-center gap-1.5">
+      <iconify-icon icon="solar:pen-new-square-linear" class="text-base"></iconify-icon>
+      <span>กำลังแก้ไขคอร์สเรียน #{{ course.id }}</span>
+    </span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-xs font-semibold text-dark dark:text-white mb-1">ชื่อคอร์สเรียน</label>
+      <input type="text" name="title" value="{{ course.title }}" required class="w-full text-xs border border-border rounded-xl px-3 py-2 bg-white dark:bg-dark focus:outline-none focus:border-primary">
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-dark dark:text-white mb-1">ราคา (บาท)</label>
+      <input type="number" step="0.01" name="price" value="{{ course.price }}" required class="w-full text-xs border border-border rounded-xl px-3 py-2 bg-white dark:bg-dark focus:outline-none focus:border-primary">
+    </div>
+  </div>
+
+  <div class="flex items-center justify-between pt-2">
+    <label class="flex items-center gap-2 text-xs font-semibold text-dark dark:text-white cursor-pointer select-none">
+      <input type="checkbox" name="is_active" {% if course.is_active %}checked{% endif %} class="rounded text-primary focus:ring-primary">
+      <span>เปิดสอนคอร์สนี้</span>
+    </label>
+
+    <div class="flex items-center gap-2">
+      <!-- Cancel Button (Revert to Normal Card Partial) -->
+      <button 
+        type="button"
+        hx-get="/admin/htmx/course/{{ course.id }}/card/" 
+        hx-target="#course-card-{{ course.id }}" 
+        hx-swap="outerHTML"
+        class="px-4 py-2 text-xs font-semibold bg-white border border-border text-muted hover:bg-lightgray rounded-xl transition-all cursor-pointer">
+        ยกเลิก
+      </button>
+
+      <button type="submit" class="px-4 py-2 text-xs font-semibold bg-warning hover:bg-warning/90 text-white rounded-xl transition-all shadow-xs cursor-pointer">
+        💾 บันทึก
+      </button>
+    </div>
+  </div>
+</form>

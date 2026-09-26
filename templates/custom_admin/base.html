@@ -1,0 +1,120 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th" dir="ltr" data-color-theme="Blue_Theme" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title|default:"RyuClass Single-Page Management" }}</title>
+
+  <!-- Google Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+  
+  <!-- tailwindadmin-1.0.0 Core CSS -->
+  <link rel="stylesheet" href="{% static 'tailwindadmin/css/theme.css' %}" />
+
+  <!-- HTMX Library (Loaded via CDN) -->
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <!-- Solar Icons CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
+
+  <style>
+    body { font-family: 'DM Sans', sans-serif; }
+  </style>
+</head>
+
+<body class="bg-surface">
+  <div id="main-wrapper" class="flex p-5 xl:pr-0 min-h-screen">
+    
+    <!-- ---------------------------------- -->
+    <!-- TailwindAdmin-1.0.0 Sidebar Header -->
+    <!-- ---------------------------------- -->
+    <aside id="application-sidebar-brand" class="hs-overlay hs-overlay-open:translate-x-0 -translate-x-full tab:translate-x-0 transition-all duration-300 transform tab:block fixed top-0 left-0 bottom-0 z-[60] bg-white border-r border-border dark:border-darkborder dark:bg-dark py-5 px-5 w-[270px]">
+      <div class="py-3 px-2 flex justify-between items-center border-b border-border pb-4">
+        <a href="/admin/" class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-lg shadow-md">R</div>
+          <div>
+            <span class="text-base font-bold text-dark dark:text-white block leading-tight">RyuClass</span>
+            <span class="text-[10px] text-muted font-medium uppercase tracking-wider">Single-Page Admin</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="scroll-sidebar mt-6">
+        <nav class="hs-accordion-group w-full flex flex-col">
+          <ul id="sidebarnav" class="space-y-1">
+            
+            <li class="caption text-xs font-bold text-muted uppercase tracking-wider px-3 py-2">
+              <span>เมนูหลัก (Single-Page Feed)</span>
+            </li>
+
+            <li class="sidebar-item">
+              <a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl bg-lightprimary text-primary font-semibold text-sm transition-all" href="/admin/">
+                <iconify-icon icon="solar:widget-linear" class="text-xl"></iconify-icon>
+                <span>จัดการคอร์ส & บทเรียน</span>
+              </a>
+            </li>
+
+            <li class="sidebar-item">
+              <a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-dark hover:bg-lightgray dark:text-white font-medium text-sm transition-all" href="/admin/payments/payment/">
+                <iconify-icon icon="solar:card-recive-linear" class="text-xl text-muted"></iconify-icon>
+                <span>รายการโอนเงิน / สลิป</span>
+              </a>
+            </li>
+
+            <li class="sidebar-item">
+              <a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-dark hover:bg-lightgray dark:text-white font-medium text-sm transition-all" href="/admin/users/user/">
+                <iconify-icon icon="solar:users-group-two-rounded-linear" class="text-xl text-muted"></iconify-icon>
+                <span>ผู้ใช้งาน & นักเรียน</span>
+              </a>
+            </li>
+
+            <li class="caption text-xs font-bold text-muted uppercase tracking-wider px-3 py-2 mt-6">
+              <span>ระบบและความปลอดภัย</span>
+            </li>
+
+            <li class="sidebar-item">
+              <a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-danger hover:bg-lightdanger font-medium text-sm transition-all" href="/admin/logout/">
+                <iconify-icon icon="solar:logout-linear" class="text-xl"></iconify-icon>
+                <span>ออกจากระบบ</span>
+              </a>
+            </li>
+
+          </ul>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- ---------------------------------- -->
+    <!-- Main Content Area (TailwindAdmin)  -->
+    <!-- ---------------------------------- -->
+    <div class="w-full page-wrapper xl:px-6 tab:ml-[270px]">
+      
+      <!-- Header Bar -->
+      <header class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-4 mb-6 flex justify-between items-center shadow-xs">
+        <div class="flex items-center gap-3">
+          <h1 class="text-base font-bold text-dark dark:text-white">ระบบจัดการหลังบ้าน RyuClass</h1>
+          <span class="bg-lightsuccess text-success text-[10px] font-bold px-2.5 py-1 rounded-full">TailwindAdmin + HTMX</span>
+        </div>
+        <div class="flex items-center gap-3 text-xs text-muted">
+          <span>ผู้ดูแลระบบ: <strong class="text-dark dark:text-white">{{ user.name|default:user.email }}</strong></span>
+        </div>
+      </header>
+
+      <!-- Main Shell Content -->
+      <div class="container-fluid">
+        {% block content %}{% endblock %}
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CSRF Config for HTMX -->
+  <script>
+    document.body.addEventListener('htmx:configRequest', (event) => {
+      event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+    });
+  </script>
+</body>
+</html>

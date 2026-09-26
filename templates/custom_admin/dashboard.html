@@ -1,0 +1,69 @@
+{% extends "custom_admin/base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- KPI Metric Cards (TailwindAdmin-1.0.0 Component) -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+    <div class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-5 shadow-xs flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl bg-lightprimary text-primary flex items-center justify-center shrink-0">
+        <iconify-icon icon="solar:users-group-two-rounded-linear" class="text-2xl"></iconify-icon>
+      </div>
+      <div>
+        <p class="text-xs text-muted font-medium">นักเรียนทั้งหมด</p>
+        <h3 class="text-xl font-bold text-dark dark:text-white leading-tight mt-0.5">{{ total_students }}</h3>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-5 shadow-xs flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl bg-lightinfo text-info flex items-center justify-center shrink-0">
+        <iconify-icon icon="solar:videocamera-record-linear" class="text-2xl"></iconify-icon>
+      </div>
+      <div>
+        <p class="text-xs text-muted font-medium">คอร์สเปิดสอน</p>
+        <h3 class="text-xl font-bold text-dark dark:text-white leading-tight mt-0.5">{{ total_courses }}</h3>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-5 shadow-xs flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl bg-lightwarning text-warning flex items-center justify-center shrink-0">
+        <iconify-icon icon="solar:card-recive-linear" class="text-2xl"></iconify-icon>
+      </div>
+      <div>
+        <p class="text-xs text-muted font-medium">รอตรวจสอบสลิป</p>
+        <h3 class="text-xl font-bold text-warning leading-tight mt-0.5">{{ pending_payments }}</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Header -->
+  <div class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-6 shadow-xs flex flex-wrap justify-between items-center gap-4">
+    <div>
+      <h2 class="text-lg font-bold text-dark dark:text-white">การจัดการคอร์สเรียนและบทเรียน (Single-Page Feed)</h2>
+      <p class="text-xs text-muted mt-1">เพิ่ม แก้ไข ลบ คอร์สเรียนและคลิปบทเรียนได้ทันที จบในหน้าเดียวโดยไม่ต้องเปลี่ยนหน้า</p>
+    </div>
+
+    <!-- Inline Add New Course Button -->
+    <button 
+      hx-post="/admin/htmx/course/create/" 
+      hx-target="#course-feed" 
+      hx-swap="afterbegin"
+      class="bg-primary hover:bg-primary/90 text-white font-semibold text-xs px-5 py-3 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer">
+      <iconify-icon icon="solar:add-circle-linear" class="text-lg"></iconify-icon>
+      <span>เพิ่มคอร์สเรียนใหม่</span>
+    </button>
+  </div>
+
+  <!-- Dynamic Course Feed Container -->
+  <div id="course-feed" class="space-y-6">
+    {% for course in courses %}
+      {% include "custom_admin/partials/course_card.html" with course=course %}
+    {% empty %}
+      <div class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-12 text-center text-muted text-sm">
+        ยังไม่มีคอร์สเรียนในระบบ กดปุ่ม "เพิ่มคอร์สเรียนใหม่" เพื่อเริ่มต้นสร้างคอร์สแรกได้ทันที
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}
