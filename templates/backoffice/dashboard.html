@@ -1,1 +1,37 @@
-{% extends 'backoffice/base.html' %}{% block content %}<div class="row">{% for card in cards %}<div class="col-md-4"><div class="small-box bg-info"><div class="inner"><h3>{{ card.value }}</h3><p>{{ card.label }}</p></div><a class="small-box-footer" href="{{ card.url }}">เปิดรายการ <i class="fas fa-arrow-circle-right"></i></a></div></div>{% endfor %}</div>{% if revenue != None %}<div class="callout callout-success"><h5>ยอดชำระที่อนุมัติ</h5><strong>฿{{ revenue|floatformat:2 }}</strong></div><div class="card"><div class="card-header"><h3 class="card-title">รายการชำระเงินล่าสุด</h3></div><div class="card-body table-responsive p-0"><table class="table table-hover"><thead><tr><th>นักเรียน</th><th>คอร์ส</th><th>ยอดเงิน</th><th>สถานะ</th><th></th></tr></thead><tbody>{% for p in recent %}<tr><td>{{ p.user.name|default:p.user.email }}</td><td>{{ p.course.title }}</td><td>{{ p.amount }}</td><td>{{ p.get_status_display }}</td><td><a href="{% url 'backoffice:detail' 'payments' 'payment' p.pk %}" class="btn btn-sm btn-outline-primary">ดูสลิป</a></td></tr>{% empty %}<tr><td colspan="5">ยังไม่มีรายการ</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}{% endblock %}
+{% extends 'backoffice/base.html' %}{% load static %}
+{% block content %}
+<div class="row">{% for card in cards %}
+<div class="col-12 col-sm-6 col-xl-3"><div class="small-box bg-{{ card.color }}">
+<div class="inner"><h3>{{ card.value }}</h3><p>{{ card.label }}</p></div><div class="icon"><i class="fas fa-{{ card.icon }}" aria-hidden="true"></i></div>
+<a class="small-box-footer" href="{{ card.url }}">ดูรายการ <i class="fas fa-arrow-circle-right" aria-hidden="true"></i></a></div></div>
+{% empty %}<div class="col-12"><div class="callout callout-info">ยังไม่มีสิทธิ์ดูข้อมูลสรุป กรุณาติดต่อผู้ดูแลระบบ</div></div>{% endfor %}</div>
+<div class="row">
+<div class="col-lg-7">
+{% if sales %}
+<div class="card"><div class="card-header"><h3 class="card-title"><i class="fas fa-chart-area mr-2"></i>ยอดชำระที่อนุมัติ</h3><div class="card-tools"><button class="btn btn-tool" data-card-widget="collapse" aria-label="ย่อหรือขยายกราฟ"><i class="fas fa-minus"></i></button></div></div>
+<div class="card-body"><div class="d-flex justify-content-between flex-wrap"><div><strong class="h3">฿{{ period_revenue|floatformat:2 }}</strong><p class="text-muted">ตามวันที่อนุมัติ · {{ period_start|date:"d/m/Y" }} – {{ period_end|date:"d/m/Y" }}</p></div><div class="btn-group align-self-start" role="group" aria-label="รูปแบบกราฟ"><button class="btn btn-primary btn-sm" id="area-chart" aria-pressed="true">พื้นที่</button><button class="btn btn-outline-primary btn-sm" id="bar-chart" aria-pressed="false">แท่ง</button></div></div>
+<div class="dashboard-chart"><canvas id="sales-chart" role="img" aria-label="ยอดชำระที่อนุมัติรายวันย้อนหลัง 30 วัน"></canvas></div>
+<details class="mt-3"><summary>ดูตัวเลขรายวัน</summary><table class="table table-sm"><thead><tr><th>วันที่</th><th>ยอดอนุมัติ (บาท)</th></tr></thead><tbody id="daily-values"></tbody></table></details>
+</div></div>
+<div class="card"><div class="card-header"><h3 class="card-title"><i class="fas fa-receipt mr-2"></i>รายการชำระเงินล่าสุด</h3><a class="float-right" href="{% url 'backoffice:list' 'payments' 'payment' %}">ดูทั้งหมด</a></div><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>นักเรียน / คอร์ส</th><th>ยอดเงิน</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody>
+{% for p in recent %}<tr><td>{{ p.user.name|default:p.user.email }}<small class="d-block text-muted">{{ p.course.title }}</small></td><td>฿{{ p.amount|floatformat:2 }}</td><td><span class="badge {% if p.status == 'approved' %}badge-success{% elif p.status == 'pending' %}badge-warning{% else %}badge-danger{% endif %}">{{ p.get_status_display }}</span></td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'backoffice:detail' 'payments' 'payment' p.pk %}">ดูสลิป</a></td></tr>{% empty %}<tr><td colspan="4" class="text-center p-4 text-muted">ยังไม่มีรายการชำระเงิน</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endif %}
+</div><div class="col-lg-5">
+{% if revenue != None %}
+<div class="card bg-primary"><div class="card-header border-0"><h3 class="card-title"><i class="fas fa-coins mr-2"></i>ภาพรวมการชำระเงิน</h3><div class="card-tools"><button class="btn btn-tool text-white" data-card-widget="collapse" aria-label="ย่อหรือขยายภาพรวม"><i class="fas fa-minus"></i></button></div></div>
+<div class="card-body"><p class="mb-1">ยอดอนุมัติสะสมทั้งหมด</p><h2 class="font-weight-bold">฿{{ revenue|floatformat:2 }}</h2><p class="text-white-50">รวมเฉพาะรายการสถานะอนุมัติแล้ว</p>
+<div class="row text-center mt-4">{% for item in payment_counts %}<div class="col-4"><a class="text-white d-block payment-stat" href="{{ item.url }}"><strong class="h3 d-block">{{ item.count }}</strong>{{ item.label }} <i class="fas fa-angle-right"></i></a></div>{% endfor %}</div></div></div>
+<div class="card"><div class="card-header"><h3 class="card-title"><i class="fas fa-trophy mr-2 text-warning"></i>5 คอร์สยอดอนุมัติสูงสุด</h3></div><div class="card-body p-0"><ul class="list-group list-group-flush">
+{% for c in course_sales %}<li class="list-group-item d-flex justify-content-between"><a href="{% url 'backoffice:list' 'payments' 'payment' %}?status=approved&amp;course={{ c.course_id }}">{{ c.course__title }}</a><strong class="ml-3 text-nowrap">฿{{ c.total|floatformat:2 }}</strong></li>{% empty %}<li class="list-group-item text-muted">ยังไม่มียอดอนุมัติ</li>{% endfor %}
+</ul></div></div>
+{% endif %}
+{% if tickets != None %}
+<div class="card"><div class="card-header"><h3 class="card-title"><i class="far fa-comments mr-2"></i>คำร้องรอดำเนินการ</h3><a class="float-right" href="{% url 'backoffice:list' 'support' 'supportticket' %}?status=pending">ดูทั้งหมด</a></div><div class="card-body">
+{% for ticket in tickets %}<a class="ticket-preview d-block text-body" href="{% url 'backoffice:detail' 'support' 'supportticket' ticket.pk %}"><div class="d-flex justify-content-between"><strong>{{ ticket.user.name|default:ticket.user.email }}</strong><small class="text-muted">{{ ticket.created_at|date:"d/m H:i" }}</small></div><small class="text-primary">{{ ticket.category }}</small><p class="mb-0">{{ ticket.message|truncatechars:120 }}</p></a>{% empty %}<p class="text-muted mb-0">ไม่มีคำร้องรอดำเนินการ</p>{% endfor %}
+</div></div>{% endif %}
+</div></div>
+{% endblock %}
+{% block scripts %}
+{% if sales %}{{ sales|json_script:"sales-data" }}<script src="{% static 'backoffice/vendor/chartjs/Chart.min.js' %}"></script><script src="{% static 'backoffice/dashboard.js' %}"></script>{% endif %}
+{% endblock %}

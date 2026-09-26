@@ -82,22 +82,10 @@ def audit(request, obj, action, message):
 
 @staff
 def dashboard(request):
-    from courses.models import Course
-    from payments.models import Payment
-    User = get_user_model()
-    cards = []
-    for model, label, query in [(User, 'นักเรียน', User.objects.filter(role='student')),
-                                (Course, 'คอร์สเรียน', Course.objects.filter(is_active=True)),
-                                (Payment, 'สลิปรอตรวจ', Payment.objects.filter(status='pending'))]:
-        if allowed(request.user, model):
-            cards.append({'label': label, 'value': query.count(),
-                          'url': reverse('backoffice:list', args=[model._meta.app_label, model._meta.model_name])})
-    recent = []
-    revenue = None
-    if allowed(request.user, Payment):
-        recent = Payment.objects.select_related('user', 'course').order_by('-submitted_at')[:8]
-        revenue = Payment.objects.filter(status='approved').aggregate(total=Sum('amount'))['total'] or 0
-    return page(request, 'dashboard.html', title='ภาพรวมระบบ', cards=cards, recent=recent, revenue=revenue)
+    from .dashboard import dashboard_data
+    return page(request, 'dashboard.html', title='Dashboard', **dashboard_data(request.user))
+
+
 
 
 def visible_fields(model):
