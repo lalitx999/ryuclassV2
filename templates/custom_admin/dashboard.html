@@ -1,122 +1,145 @@
 {% extends "custom_admin/base.html" %}
+{% load static %}
 
 {% block content %}
-<div class="space-y-6">
-
-  <!-- ------------------------------------------------------------- -->
-  <!-- 1. Welcome Back Banner (TailwindAdmin-1.0.0 Banner Style)     -->
-  <!-- ------------------------------------------------------------- -->
-  <div class="relative flex items-center justify-between bg-lightsecondary dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-6 shadow-xs">
-    <div class="flex items-center gap-4">
-      <div class="w-14 h-14 rounded-full bg-primary text-white flex items-center justify-center font-bold text-2xl shadow-md shrink-0">
-        {{ user.name|default:user.email|slice:":1"|upper }}
-      </div>
-      <div class="flex flex-col gap-0.5">
-        <h2 class="text-xl font-bold text-dark dark:text-white">ยินดีต้อนรับกลับมา! คุณ {{ user.name|default:user.email }} 👋</h2>
-        <p class="text-xs text-muted">ระบบบริหารจัดการคอร์สเรียน การโอนเงิน และนักเรียน RyuClass แบบ Single-Page Dashboard</p>
-      </div>
+<!-- ------------------------------------------------------------- -->
+<!-- 1. Welcome Back Banner (Tailwindadmin 1:1 Banner)             -->
+<!-- ------------------------------------------------------------- -->
+<div class="relative flex items-center justify-between bg-lightsecondary dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-6 mb-6">
+  <div class="flex items-center gap-4">
+    <div>
+      <img src="{% static 'tailwindadmin/images/profile/user-1.jpg' %}" alt="user-img" class="w-[50px] h-[50px] rounded-full border-2 border-primary" />
     </div>
-    <div class="hidden sm:flex items-center gap-3">
-      <a href="/admin/payments/payment/?status__exact=pending" class="px-4 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-semibold shadow-md transition-all flex items-center gap-2">
-        <iconify-icon icon="solar:card-recive-linear" class="text-base"></iconify-icon>
-        <span>ตรวจสลิปโอนเงิน</span>
-        {% if pending_payments and pending_payments != "0" %}
-          <span class="bg-danger text-white rounded-full px-2 py-0.5 text-[10px] font-bold">{{ pending_payments }}</span>
-        {% endif %}
-      </a>
+    <div class="flex flex-col gap-0.5">
+      <h5 class="text-lg font-semibold text-dark dark:text-white">Welcome back! {{ user.name|default:user.email }} 👋</h5>
+      <p class="text-xs text-muted">ตรวจสอบรายงานสถิติ และการแจ้งโอนเงินล่าสุดของ RyuClass</p>
     </div>
   </div>
 
-  <!-- ------------------------------------------------------------- -->
-  <!-- 2. KPI Metric Stat Cards Grid (TailwindAdmin Cards Component) -->
-  <!-- ------------------------------------------------------------- -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-    
-    <!-- Card 1: Students -->
-    <div class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-5 shadow-xs flex items-center gap-4">
-      <div class="w-12 h-12 rounded-xl bg-lightprimary text-primary flex items-center justify-center shrink-0">
-        <iconify-icon icon="solar:users-group-two-rounded-linear" class="text-2xl"></iconify-icon>
-      </div>
-      <div>
-        <p class="text-xs text-muted font-medium">นักเรียนทั้งหมด</p>
-        <h3 class="text-xl font-bold text-dark dark:text-white leading-tight mt-0.5">{{ total_students }}</h3>
-      </div>
-    </div>
+  <div class="hidden sm:flex items-center gap-3">
+    <a href="/admin/payments/payment/?status__exact=pending" class="px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-semibold shadow-md transition-all flex items-center gap-2">
+      <iconify-icon icon="solar:card-recive-linear" class="text-lg"></iconify-icon>
+      <span>ดูรายการสลิปรอตรวจสอบ</span>
+      {% if pending_payments and pending_payments != "0" %}
+        <span class="bg-danger text-white rounded-full px-2 py-0.5 text-[10px] font-bold">{{ pending_payments }}</span>
+      {% endif %}
+    </a>
+  </div>
+</div>
 
-    <!-- Card 2: Courses -->
-    <div class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-5 shadow-xs flex items-center gap-4">
-      <div class="w-12 h-12 rounded-xl bg-lightinfo text-info flex items-center justify-center shrink-0">
-        <iconify-icon icon="solar:videocamera-record-linear" class="text-2xl"></iconify-icon>
+<!-- ------------------------------------------------------------- -->
+<!-- 2. 6 Top Counter Cards Grid (Tailwindadmin 1:1 SVG Cards)    -->
+<!-- ------------------------------------------------------------- -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+  
+  <!-- Card 1: Students -->
+  <div class="card mb-0 shadow-none bg-lightprimary dark:bg-dark w-full rounded-2xl border border-border dark:border-darkborder">
+    <div class="card-body p-4 text-center">
+      <div class="flex justify-center mb-2">
+        <img src="{% static 'tailwindadmin/images/svgs/icon-user-male.svg' %}" width="42" height="42" alt="students">
       </div>
-      <div>
-        <p class="text-xs text-muted font-medium">คอร์สเปิดสอน</p>
-        <h3 class="text-xl font-bold text-dark dark:text-white leading-tight mt-0.5">{{ total_courses }}</h3>
-      </div>
+      <p class="font-semibold text-xs text-primary mb-1">นักเรียนทั้งหมด</p>
+      <h5 class="text-base font-bold text-primary mb-0">{{ total_students }}</h5>
     </div>
-
-    <!-- Card 3: Pending Slips -->
-    <div class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-5 shadow-xs flex items-center gap-4">
-      <div class="w-12 h-12 rounded-xl bg-lightwarning text-warning flex items-center justify-center shrink-0">
-        <iconify-icon icon="solar:card-recive-linear" class="text-2xl"></iconify-icon>
-      </div>
-      <div>
-        <p class="text-xs text-muted font-medium">รอตรวจสอบสลิป</p>
-        <h3 class="text-xl font-bold text-warning leading-tight mt-0.5">{{ pending_payments }}</h3>
-      </div>
-    </div>
-
-    <!-- Card 4: Revenue -->
-    <div class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-5 shadow-xs flex items-center gap-4">
-      <div class="w-12 h-12 rounded-xl bg-lightsuccess text-success flex items-center justify-center shrink-0">
-        <iconify-icon icon="solar:wallet-money-linear" class="text-2xl"></iconify-icon>
-      </div>
-      <div>
-        <p class="text-xs text-muted font-medium">รายได้สะสมรวม</p>
-        <h3 class="text-xl font-bold text-success leading-tight mt-0.5">{{ total_revenue }}</h3>
-      </div>
-    </div>
-
   </div>
 
-  <!-- ------------------------------------------------------------- -->
-  <!-- 3. Split Data Grid: Recent Payment Slips & Recent Students    -->
-  <!-- ------------------------------------------------------------- -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    
-    <!-- Left Side: Recent Payment Slips Table (Span 2) -->
-    <div class="lg:col-span-2 bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-6 shadow-xs space-y-4">
-      <div class="flex justify-between items-center border-b border-border dark:border-darkborder pb-4">
-        <div class="flex items-center gap-2">
-          <iconify-icon icon="solar:history-linear" class="text-xl text-primary"></iconify-icon>
-          <h3 class="text-sm font-bold text-dark dark:text-white">รายการแจ้งโอนเงินล่าสุด (QC Table)</h3>
+  <!-- Card 2: Courses -->
+  <div class="card mb-0 shadow-none bg-lightwarning dark:bg-dark w-full rounded-2xl border border-border dark:border-darkborder">
+    <div class="card-body p-4 text-center">
+      <div class="flex justify-center mb-2">
+        <img src="{% static 'tailwindadmin/images/svgs/icon-briefcase.svg' %}" width="42" height="42" alt="courses">
+      </div>
+      <p class="font-semibold text-xs text-warning mb-1">คอร์สเปิดสอน</p>
+      <h5 class="text-base font-bold text-warning mb-0">{{ total_courses }}</h5>
+    </div>
+  </div>
+
+  <!-- Card 3: Pending Slips -->
+  <div class="card mb-0 shadow-none bg-lightinfo dark:bg-dark w-full rounded-2xl border border-border dark:border-darkborder">
+    <div class="card-body p-4 text-center">
+      <div class="flex justify-center mb-2">
+        <img src="{% static 'tailwindadmin/images/svgs/icon-mailbox.svg' %}" width="42" height="42" alt="pending">
+      </div>
+      <p class="font-semibold text-xs text-info mb-1">รอตรวจสลิป</p>
+      <h5 class="text-base font-bold text-info mb-0">{{ pending_payments }}</h5>
+    </div>
+  </div>
+
+  <!-- Card 4: Revenue -->
+  <div class="card mb-0 shadow-none bg-lighterror dark:bg-dark w-full rounded-2xl border border-border dark:border-darkborder">
+    <div class="card-body p-4 text-center">
+      <div class="flex justify-center mb-2">
+        <img src="{% static 'tailwindadmin/images/svgs/icon-favorites.svg' %}" width="42" height="42" alt="revenue">
+      </div>
+      <p class="font-semibold text-xs text-error mb-1">รายได้สะสมรวม</p>
+      <h5 class="text-base font-bold text-error mb-0">{{ total_revenue }}</h5>
+    </div>
+  </div>
+
+  <!-- Card 5: Tickets -->
+  <div class="card mb-0 shadow-none bg-lightsuccess dark:bg-dark w-full rounded-2xl border border-border dark:border-darkborder">
+    <div class="card-body p-4 text-center">
+      <div class="flex justify-center mb-2">
+        <img src="{% static 'tailwindadmin/images/svgs/icon-speech-bubble.svg' %}" width="42" height="42" alt="tickets">
+      </div>
+      <p class="font-semibold text-xs text-success mb-1">ตั๋วสอบถาม</p>
+      <h5 class="text-base font-bold text-success mb-0">Active</h5>
+    </div>
+  </div>
+
+  <!-- Card 6: Affiliates -->
+  <div class="card mb-0 shadow-none bg-lightinfo dark:bg-dark w-full rounded-2xl border border-border dark:border-darkborder">
+    <div class="card-body p-4 text-center">
+      <div class="flex justify-center mb-2">
+        <img src="{% static 'tailwindadmin/images/svgs/icon-connect.svg' %}" width="42" height="42" alt="affiliates">
+      </div>
+      <p class="font-semibold text-xs text-info mb-1">ตัวแทนขาย</p>
+      <h5 class="text-base font-bold text-info mb-0">Affiliate</h5>
+    </div>
+  </div>
+
+</div>
+
+<!-- ------------------------------------------------------------- -->
+<!-- 3. Split Grid: Recent Payment Slips & Recent Students        -->
+<!-- ------------------------------------------------------------- -->
+<div class="grid grid-cols-12 gap-6 mb-8">
+  
+  <!-- Left Column: Recent Payments Table (8 Cols) -->
+  <div class="col-span-12 lg:col-span-8">
+    <div class="card mb-0 rounded-2xl border border-border dark:border-darkborder bg-white dark:bg-dark p-6 shadow-xs">
+      <div class="flex justify-between items-center mb-4 pb-3 border-b border-border dark:border-darkborder">
+        <div>
+          <h5 class="text-base font-bold text-dark dark:text-white">รายการแจ้งโอนเงินล่าสุด (QC Table)</h5>
+          <p class="text-xs text-muted">แสดงรายการชำระเงินที่เข้ามาล่าสุดในระบบ</p>
         </div>
-        <a href="/admin/payments/payment/" class="text-xs text-primary font-semibold hover:underline">ดูทั้งหมด →</a>
+        <a href="/admin/payments/payment/" class="text-xs font-semibold text-primary hover:underline">ดูทั้งหมด →</a>
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
-            <tr class="text-[11px] font-bold text-muted uppercase tracking-wider border-b border-border dark:border-darkborder pb-2">
-              <th class="py-2.5 px-3">ผู้เรียน</th>
-              <th class="py-2.5 px-3">คอร์สเรียน</th>
-              <th class="py-2.5 px-3 text-right">ยอดชำระ</th>
-              <th class="py-2.5 px-3 text-center">สถานะ</th>
+            <tr class="text-[11px] font-bold text-muted uppercase tracking-wider border-b border-border dark:border-darkborder">
+              <th class="py-3 px-3">ผู้เรียน</th>
+              <th class="py-3 px-3">วิชาเรียน</th>
+              <th class="py-3 px-3 text-right">ยอดชำระ</th>
+              <th class="py-3 px-3 text-center">สถานะ</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border dark:divide-darkborder text-xs">
             {% for payment in recent_payments %}
               <tr class="hover:bg-lightgray dark:hover:bg-dark/50 transition-colors">
-                <td class="py-3 px-3">
+                <td class="py-3.5 px-3">
                   <div class="font-bold text-dark dark:text-white">{{ payment.user.name|default:payment.user.email }}</div>
                   <div class="text-[10px] text-muted">{{ payment.user.email }}</div>
                 </td>
-                <td class="py-3 px-3 text-muted truncate max-w-[160px]">{{ payment.course.title }}</td>
-                <td class="py-3 px-3 text-right font-bold text-dark dark:text-white">฿{{ payment.amount|floatformat:0 }}</td>
-                <td class="py-3 px-3 text-center">
+                <td class="py-3.5 px-3 text-muted truncate max-w-[180px]">{{ payment.course.title }}</td>
+                <td class="py-3.5 px-3 text-right font-bold text-dark dark:text-white">฿{{ payment.amount|floatformat:0 }}</td>
+                <td class="py-3.5 px-3 text-center">
                   {% if payment.status == 'approved' %}
-                    <span class="bg-lightsuccess text-success text-[10px] font-bold px-2.5 py-0.5 rounded-full">อนุมัติแล้ว</span>
+                    <span class="bg-lightsuccess text-success text-[10px] font-bold px-2.5 py-0.5 rounded-full">อนุมัติเรียบร้อย</span>
                   {% elif payment.status == 'rejected' %}
-                    <span class="bg-lightdanger text-danger text-[10px] font-bold px-2.5 py-0.5 rounded-full">ปฏิเสธ</span>
+                    <span class="bg-lighterror text-error text-[10px] font-bold px-2.5 py-0.5 rounded-full">ปฏิเสธสิทธิ์</span>
                   {% else %}
                     <span class="bg-lightwarning text-warning text-[10px] font-bold px-2.5 py-0.5 rounded-full animate-pulse">รอตรวจสอบ</span>
                   {% endif %}
@@ -131,25 +154,24 @@
         </table>
       </div>
     </div>
+  </div>
 
-    <!-- Right Side: Recent Students Registered -->
-    <div class="lg:col-span-1 bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-6 shadow-xs space-y-4">
-      <div class="flex justify-between items-center border-b border-border dark:border-darkborder pb-4">
-        <div class="flex items-center gap-2">
-          <iconify-icon icon="solar:user-plus-linear" class="text-xl text-primary"></iconify-icon>
-          <h3 class="text-sm font-bold text-dark dark:text-white">ผู้เรียนลงทะเบียนใหม่</h3>
-        </div>
-        <a href="/admin/users/user/" class="text-xs text-primary font-semibold hover:underline">จัดการผู้ใช้</a>
+  <!-- Right Column: Recent Students List (4 Cols) -->
+  <div class="col-span-12 lg:col-span-4">
+    <div class="card mb-0 rounded-2xl border border-border dark:border-darkborder bg-white dark:bg-dark p-6 shadow-xs">
+      <div class="flex justify-between items-center mb-4 pb-3 border-b border-border dark:border-darkborder">
+        <h5 class="text-base font-bold text-dark dark:text-white">นักเรียนสมัครใหม่</h5>
+        <a href="/admin/users/user/" class="text-xs font-semibold text-primary hover:underline">จัดการ</a>
       </div>
 
       <div class="space-y-3">
         {% for student in recent_students %}
-          <div class="flex items-center justify-between p-2.5 rounded-xl bg-lightgray dark:bg-dark/40 border border-border/50 text-xs">
+          <div class="flex items-center justify-between p-3 rounded-xl bg-lightgray dark:bg-dark/40 border border-border/60 text-xs">
             <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-lightprimary text-primary flex items-center justify-center font-bold text-xs shrink-0">
+              <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0">
                 {{ student.name|default:student.email|slice:":1"|upper }}
               </div>
-              <div class="truncate max-w-[140px]">
+              <div class="truncate max-w-[130px]">
                 <div class="font-bold text-dark dark:text-white truncate">{{ student.name|default:student.email }}</div>
                 <div class="text-[10px] text-muted truncate">{{ student.email }}</div>
               </div>
@@ -157,20 +179,22 @@
             <span class="text-[10px] text-muted shrink-0">{{ student.created_at|date:"j M" }}</span>
           </div>
         {% empty %}
-          <div class="py-6 text-center text-muted text-xs">ยังไม่มีนักเรียนลงทะเบียนใหม่</div>
+          <div class="py-6 text-center text-muted text-xs">ยังไม่มีผู้เรียนสมัครใหม่</div>
         {% endfor %}
       </div>
     </div>
-
   </div>
 
-  <!-- ------------------------------------------------------------- -->
-  <!-- 4. Interactive Single-Page Course & Lesson Management Feed    -->
-  <!-- ------------------------------------------------------------- -->
-  <div class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-6 shadow-xs flex flex-wrap justify-between items-center gap-4">
+</div>
+
+<!-- ------------------------------------------------------------- -->
+<!-- 4. Interactive Single-Page Course & Lesson Feed (HTMX)       -->
+<!-- ------------------------------------------------------------- -->
+<div class="card rounded-2xl border border-border dark:border-darkborder bg-white dark:bg-dark p-6 shadow-xs mb-6">
+  <div class="flex flex-wrap justify-between items-center gap-4 mb-6 pb-4 border-b border-border dark:border-darkborder">
     <div>
-      <h2 class="text-base font-bold text-dark dark:text-white">จัดการคอร์สเรียนและบทเรียน (Interactive Single-Page Feed)</h2>
-      <p class="text-xs text-muted mt-1">คลิกเพิ่ม/แก้ไข/ลบ คอร์สและบทเรียนย่อยแบบ Inline ได้ทันที จบในหน้าเดียวโดยไม่ต้องโหลดใหม่</p>
+      <h4 class="text-base font-bold text-dark dark:text-white">จัดการคอร์สเรียนและบทเรียน (Single-Page Feed)</h4>
+      <p class="text-xs text-muted mt-0.5">เพิ่ม แก้ไข ลบ คอร์สเรียนและคลิปบทเรียนได้ทันที จบในหน้าเดียวโดยไม่ต้องเปลี่ยนหน้า</p>
     </div>
 
     <!-- Inline Add Course Button (HTMX Trigger) -->
@@ -178,7 +202,7 @@
       hx-post="/admin/htmx/course/create/" 
       hx-target="#course-feed" 
       hx-swap="afterbegin"
-      class="bg-primary hover:bg-primary/90 text-white font-semibold text-xs px-5 py-3 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer">
+      class="bg-primary hover:bg-primary/90 text-white font-semibold text-xs px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer">
       <iconify-icon icon="solar:add-circle-linear" class="text-lg"></iconify-icon>
       <span>เพิ่มคอร์สเรียนใหม่</span>
     </button>
@@ -189,11 +213,11 @@
     {% for course in courses %}
       {% include "custom_admin/partials/course_card.html" with course=course %}
     {% empty %}
-      <div class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-12 text-center text-muted text-sm">
+      <div class="py-12 text-center text-muted text-sm">
         ยังไม่มีคอร์สเรียนในระบบ กดปุ่ม "เพิ่มคอร์สเรียนใหม่" ด้านบนเพื่อเริ่มต้นสร้างคอร์สแรกได้ทันที
       </div>
     {% endfor %}
   </div>
-
 </div>
+
 {% endblock %}

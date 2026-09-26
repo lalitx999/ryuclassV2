@@ -1,116 +1,180 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="th" dir="ltr" data-color-theme="Blue_Theme" class="light">
+<html lang="th" dir="ltr" data-color-theme="Blue_Theme" class="light selected" data-layout="vertical" data-boxed-layout="boxed" data-card="shadow">
+
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ title|default:"RyuClass Single-Page Management" }}</title>
+  <title>{{ title|default:"RyuClass Admin Dashboard" }}</title>
 
-  <!-- Google Fonts & Icons -->
+  <!-- Favicon -->
+  <link rel="shortcut icon" type="image/png" href="{% static 'tailwindadmin/images/logos/favicon.png' %}" />
+  <!-- DM Sans Font -->
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
+  <!-- Tabler Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
   
-  <!-- tailwindadmin-1.0.0 Core CSS -->
+  <!-- Core Tailwindadmin Theme Css -->
   <link rel="stylesheet" href="{% static 'tailwindadmin/css/theme.css' %}" />
 
-  <!-- HTMX Library (Loaded via CDN) -->
+  <!-- HTMX Library (Async Dynamic Swapping) -->
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <!-- Solar Icons CDN -->
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
-
-  <style>
-    body { font-family: 'DM Sans', sans-serif; }
-  </style>
 </head>
 
-<body class="bg-surface">
-  <div id="main-wrapper" class="flex p-5 xl:pr-0 min-h-screen">
-    
-    <!-- ---------------------------------- -->
-    <!-- TailwindAdmin-1.0.0 Sidebar Header -->
-    <!-- ---------------------------------- -->
-    <aside id="application-sidebar-brand" class="hs-overlay hs-overlay-open:translate-x-0 -translate-x-full tab:translate-x-0 transition-all duration-300 transform tab:block fixed top-0 left-0 bottom-0 z-[60] bg-white border-r border-border dark:border-darkborder dark:bg-dark py-5 px-5 w-[270px]">
-      <div class="py-3 px-2 flex justify-between items-center border-b border-border pb-4">
-        <a href="/admin/" class="flex items-center gap-2">
-          <div class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-lg shadow-md">R</div>
-          <div>
-            <span class="text-base font-bold text-dark dark:text-white block leading-tight">RyuClass</span>
-            <span class="text-[10px] text-muted font-medium uppercase tracking-wider">Single-Page Admin</span>
+<body class="DEFAULT_THEME bg-white dark:bg-dark">
+
+  <main>
+    <div id="main-wrapper" class="flex">
+
+      <!-- ------------------------------------------------------------- -->
+      <!-- Tailwindadmin 1:1 Sidebar                                      -->
+      <!-- ------------------------------------------------------------- -->
+      <aside id="application-sidebar-brand"
+        class="hs-overlay hs-overlay-open:translate-x-0 -translate-x-full xl:rtl:-translate-x-0 rtl:translate-x-full left-0 rtl:left-auto rtl:right-0 transform hidden xl:block xl:translate-x-0 xl:end-auto xl:bottom-0 fixed top-0 with-vertical left-sidebar transition-all duration-300 h-screen z-20 flex-shrink-0 border-r rtl:border-l rtl:border-r-0 w-[270px] border-border dark:border-darkborder bg-white dark:bg-dark">
+        
+        <!-- Brand Logo -->
+        <div class="py-5 px-5 flex justify-between items-center border-b border-border dark:border-darkborder">
+          <a href="/admin/" class="flex items-center gap-3">
+            <img src="{% static 'tailwindadmin/images/logos/dark-logo.svg' %}" class="dark:hidden block h-7" alt="Tailwindadmin Logo" />
+            <img src="{% static 'tailwindadmin/images/logos/light-logo.svg' %}" class="dark:block hidden h-7" alt="Tailwindadmin Logo" />
+          </a>
+        </div>
+
+        <!-- Sidebar Navigation -->
+        <div class="scroll-sidebar px-4 mt-6">
+          <nav class="hs-accordion-group w-full flex flex-col">
+            <ul id="sidebarnav" class="space-y-1">
+
+              <div class="caption px-3 py-2 text-xs font-bold text-muted uppercase tracking-wider">
+                <span>HOME</span>
+              </div>
+
+              <li class="sidebar-item">
+                <a class="sidebar-link dark-sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl bg-lightprimary text-primary font-semibold text-sm transition-all" href="/admin/">
+                  <iconify-icon icon="solar:widget-linear" class="text-xl shrink-0"></iconify-icon>
+                  <span class="hide-menu shrink-0">Dashboard (หน้าแรก)</span>
+                </a>
+              </li>
+
+              <div class="caption px-3 py-2 text-xs font-bold text-muted uppercase tracking-wider mt-6">
+                <span>MANAGEMENT (จัดการระบบ)</span>
+              </div>
+
+              <li class="sidebar-item">
+                <a class="sidebar-link dark-sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-link hover:bg-lightprimary hover:text-primary dark:text-white font-medium text-sm transition-all" href="/admin/payments/payment/">
+                  <iconify-icon icon="solar:cart-linear" class="text-xl shrink-0"></iconify-icon>
+                  <span class="hide-menu shrink-0">แจ้งโอนเงิน / สลิป QC</span>
+                  {% if pending_payments and pending_payments != "0" %}
+                    <span class="ms-auto bg-lightdanger text-danger rounded-full px-2 py-0.5 text-[10px] font-bold">{{ pending_payments }}</span>
+                  {% endif %}
+                </a>
+              </li>
+
+              <li class="sidebar-item">
+                <a class="sidebar-link dark-sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-link hover:bg-lightprimary hover:text-primary dark:text-white font-medium text-sm transition-all" href="/admin/courses/course/">
+                  <iconify-icon icon="solar:music-note-linear" class="text-xl shrink-0"></iconify-icon>
+                  <span class="hide-menu shrink-0">คอร์สเรียน & บทเรียน</span>
+                </a>
+              </li>
+
+              <li class="sidebar-item">
+                <a class="sidebar-link dark-sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-link hover:bg-lightprimary hover:text-primary dark:text-white font-medium text-sm transition-all" href="/admin/users/user/">
+                  <iconify-icon icon="solar:users-group-two-rounded-linear" class="text-xl shrink-0"></iconify-icon>
+                  <span class="hide-menu shrink-0">นักเรียน & สมาชิก</span>
+                </a>
+              </li>
+
+              <li class="sidebar-item">
+                <a class="sidebar-link dark-sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-link hover:bg-lightprimary hover:text-primary dark:text-white font-medium text-sm transition-all" href="/admin/support/supportticket/">
+                  <iconify-icon icon="solar:mailbox-linear" class="text-xl shrink-0"></iconify-icon>
+                  <span class="hide-menu shrink-0">ตั๋วขอความช่วยเหลือ</span>
+                </a>
+              </li>
+
+              <li class="sidebar-item">
+                <a class="sidebar-link dark-sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-link hover:bg-lightprimary hover:text-primary dark:text-white font-medium text-sm transition-all" href="/admin/affiliates/affiliateprofile/">
+                  <iconify-icon icon="solar:user-speak-linear" class="text-xl shrink-0"></iconify-icon>
+                  <span class="hide-menu shrink-0">ตัวแทนจำหน่าย (Affiliates)</span>
+                </a>
+              </li>
+
+              <div class="caption px-3 py-2 text-xs font-bold text-muted uppercase tracking-wider mt-6">
+                <span>SYSTEM</span>
+              </div>
+
+              <li class="sidebar-item">
+                <a class="sidebar-link dark-sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-error hover:bg-lighterror font-medium text-sm transition-all" href="/admin/logout/">
+                  <iconify-icon icon="solar:logout-linear" class="text-xl shrink-0"></iconify-icon>
+                  <span class="hide-menu shrink-0">ออกจากระบบ</span>
+                </a>
+              </li>
+
+            </ul>
+          </nav>
+        </div>
+
+      </aside>
+
+      <!-- ------------------------------------------------------------- -->
+      <!-- Main Content Page Wrapper                                      -->
+      <!-- ------------------------------------------------------------- -->
+      <div class="page-wrapper w-full" role="main">
+        
+        <!-- Header Start -->
+        <header class="sticky top-header top-0 inset-x-0 z-10 flex flex-wrap md:justify-start md:flex-nowrap text-sm bg-white dark:bg-dark border-b border-border dark:border-darkborder">
+          <div class="w-full mx-auto px-4 lg:py-4 py-3 lg:px-6">
+            <div class="relative flex items-center justify-between">
+              
+              <!-- Search Form -->
+              <div class="flex items-center gap-3">
+                <form class="relative hidden lg:flex">
+                  <input type="text" class="form-control ps-10 border border-border dark:border-darkborder rounded-full py-2 text-xs bg-lightgray dark:bg-dark" placeholder="ค้นหาคอร์ส, นักเรียน, สลิป...">
+                  <iconify-icon icon="solar:minimalistic-magnifer-linear" class="absolute inset-y-0 left-3 flex items-center text-base text-muted my-auto"></iconify-icon>
+                </form>
+              </div>
+
+              <!-- Header Right Icons -->
+              <div class="icon-nav items-center gap-3 flex">
+                <div class="hidden lg:block bg-lightprimary text-primary px-3.5 py-1.5 rounded-full text-xs font-bold border border-primary/20">
+                  RyuClass Admin v2.0
+                </div>
+
+                <!-- Theme Toggle Button -->
+                <button type="button" class="icon-hover flex cursor-pointer items-center font-medium hover:text-primary text-link dark:text-darklink h-9 w-9 light-dark-hoverbg justify-center rounded-full" id="dark-layout" onclick="document.documentElement.classList.toggle('dark')">
+                  <iconify-icon icon="solar:moon-linear" class="text-xl"></iconify-icon>
+                </button>
+
+                <!-- Profile Dropdown Avatar -->
+                <div class="flex items-center gap-2 border-l border-border dark:border-darkborder ps-3">
+                  <img src="{% static 'tailwindadmin/images/profile/user-1.jpg' %}" alt="user-img" class="w-9 h-9 rounded-full border-2 border-primary" />
+                  <div class="hidden sm:block text-left">
+                    <p class="text-xs font-bold text-dark dark:text-white leading-tight">{{ user.name|default:user.email }}</p>
+                    <p class="text-[10px] text-muted">Administrator</p>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
           </div>
-        </a>
-      </div>
+        </header>
 
-      <div class="scroll-sidebar mt-6">
-        <nav class="hs-accordion-group w-full flex flex-col">
-          <ul id="sidebarnav" class="space-y-1">
-            
-            <li class="caption text-xs font-bold text-muted uppercase tracking-wider px-3 py-2">
-              <span>เมนูหลัก (Single-Page Feed)</span>
-            </li>
+        <!-- Main Body Content -->
+        <main class="max-w-full pt-4">
+          <div class="container full-container py-5 px-6">
+            {% block content %}{% endblock %}
+          </div>
+        </main>
 
-            <li class="sidebar-item">
-              <a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl bg-lightprimary text-primary font-semibold text-sm transition-all" href="/admin/">
-                <iconify-icon icon="solar:widget-linear" class="text-xl"></iconify-icon>
-                <span>จัดการคอร์ส & บทเรียน</span>
-              </a>
-            </li>
-
-            <li class="sidebar-item">
-              <a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-dark hover:bg-lightgray dark:text-white font-medium text-sm transition-all" href="/admin/payments/payment/">
-                <iconify-icon icon="solar:card-recive-linear" class="text-xl text-muted"></iconify-icon>
-                <span>รายการโอนเงิน / สลิป</span>
-              </a>
-            </li>
-
-            <li class="sidebar-item">
-              <a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-dark hover:bg-lightgray dark:text-white font-medium text-sm transition-all" href="/admin/users/user/">
-                <iconify-icon icon="solar:users-group-two-rounded-linear" class="text-xl text-muted"></iconify-icon>
-                <span>ผู้ใช้งาน & นักเรียน</span>
-              </a>
-            </li>
-
-            <li class="caption text-xs font-bold text-muted uppercase tracking-wider px-3 py-2 mt-6">
-              <span>ระบบและความปลอดภัย</span>
-            </li>
-
-            <li class="sidebar-item">
-              <a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-danger hover:bg-lightdanger font-medium text-sm transition-all" href="/admin/logout/">
-                <iconify-icon icon="solar:logout-linear" class="text-xl"></iconify-icon>
-                <span>ออกจากระบบ</span>
-              </a>
-            </li>
-
-          </ul>
-        </nav>
-      </div>
-    </aside>
-
-    <!-- ---------------------------------- -->
-    <!-- Main Content Area (TailwindAdmin)  -->
-    <!-- ---------------------------------- -->
-    <div class="w-full page-wrapper xl:px-6 tab:ml-[270px]">
-      
-      <!-- Header Bar -->
-      <header class="bg-white dark:bg-dark border border-border dark:border-darkborder rounded-2xl p-4 mb-6 flex justify-between items-center shadow-xs">
-        <div class="flex items-center gap-3">
-          <h1 class="text-base font-bold text-dark dark:text-white">ระบบจัดการหลังบ้าน RyuClass</h1>
-          <span class="bg-lightsuccess text-success text-[10px] font-bold px-2.5 py-1 rounded-full">TailwindAdmin + HTMX</span>
-        </div>
-        <div class="flex items-center gap-3 text-xs text-muted">
-          <span>ผู้ดูแลระบบ: <strong class="text-dark dark:text-white">{{ user.name|default:user.email }}</strong></span>
-        </div>
-      </header>
-
-      <!-- Main Shell Content -->
-      <div class="container-fluid">
-        {% block content %}{% endblock %}
       </div>
 
     </div>
-  </div>
+  </main>
 
-  <!-- CSRF Config for HTMX -->
+  <!-- CSRF Token Config for HTMX -->
   <script>
     document.body.addEventListener('htmx:configRequest', (event) => {
       event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
