@@ -20,9 +20,6 @@ ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
-    'unfold',
-    'unfold.contrib.filters',
-    'unfold.contrib.forms',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -44,89 +41,6 @@ INSTALLED_APPS = [
     'system_config.apps.SystemConfigConfig',
     'community.apps.CommunityConfig',
 ]
-
-UNFOLD = {
-    "SITE_TITLE": "RyuClass Admin",
-    "SITE_HEADER": "RyuClass Admin Portal",
-    "SITE_URL": "/",
-    "SHOW_HISTORY": True,
-    "SHOW_VIEW_ON_SITE": False,
-    "SIDEBAR": {
-        "show_search": True,
-        "show_all_applications": True,
-        "navigation": [
-            {
-                "title": "แดชบอร์ดหลัก",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "หน้าแรกแดชบอร์ด",
-                        "icon": "dashboard",
-                        "link": "/admin/",
-                    },
-                ],
-            },
-            {
-                "title": "การเงิน",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "แจ้งชำระเงิน / สลิป",
-                        "icon": "payments",
-                        "link": "/admin/payments/payment/",
-                    },
-                    {
-                        "title": "ระบบแนะนำ (Affiliates)",
-                        "icon": "group",
-                        "link": "/admin/affiliates/affiliateprofile/",
-                    },
-                ],
-            },
-            {
-                "title": "คอร์สเรียน",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "คอร์สเรียน",
-                        "icon": "school",
-                        "link": "/admin/courses/course/",
-                    },
-                    {
-                        "title": "โมดูลบทเรียน",
-                        "icon": "view_module",
-                        "link": "/admin/courses/module/",
-                    },
-                    {
-                        "title": "คลิปบทเรียน",
-                        "icon": "play_circle",
-                        "link": "/admin/courses/lesson/",
-                    },
-                    {
-                        "title": "สิทธิ์การเข้าเรียน",
-                        "icon": "assignment_ind",
-                        "link": "/admin/courses/enrollment/",
-                    },
-                ],
-            },
-            {
-                "title": "ผู้ใช้งาน & สนับสนุน",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "ผู้ใช้งานทั้งหมด",
-                        "icon": "person",
-                        "link": "/admin/users/user/",
-                    },
-                    {
-                        "title": "ตั๋วขอความช่วยเหลือ",
-                        "icon": "confirmation_number",
-                        "link": "/admin/support/supportticket/",
-                    },
-                ],
-            },
-        ],
-    },
-}
 
 
 MIDDLEWARE = [

@@ -1,32 +1,23 @@
 from django.contrib import admin, messages
-from unfold.admin import ModelAdmin, TabularInline
-from unfold.decorators import display
 from .models import Post, PostImage, PostLike, Comment
 
-class PostImageInline(TabularInline):
+class PostImageInline(admin.TabularInline):
     model = PostImage
     extra = 0
     fields = ('image_url', 'sort_order', 'created_at')
     readonly_fields = ('created_at',)
 
 @admin.register(Post)
-class PostAdmin(ModelAdmin):
+class PostAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'category', 'user', 'moderation_badge', 'views_count', 'likes_count', 'created_at')
     list_filter = ('category', 'moderation_status', 'created_at')
     search_fields = ('title', 'content', 'user__email', 'user__name')
     inlines = [PostImageInline]
     actions = ['approve_posts', 'reject_posts']
 
-    @display(
-        description="สถานะตรวจสอบ",
-        label={
-            "APPROVED": "success",
-            "PENDING": "warning",
-            "REJECTED": "danger",
-        }
-    )
     def moderation_badge(self, obj):
         return obj.moderation_status
+    moderation_badge.short_description = "สถานะตรวจสอบ"
 
     @admin.action(description="✅ อนุมัติกระทู้ (Approve selected posts)")
     def approve_posts(self, request, queryset):
@@ -40,24 +31,17 @@ class PostAdmin(ModelAdmin):
 
 
 @admin.register(Comment)
-class CommentAdmin(ModelAdmin):
+class CommentAdmin(admin.ModelAdmin):
     list_display = ('id', 'post', 'user', 'moderation_badge', 'created_at')
     list_filter = ('moderation_status', 'created_at')
     search_fields = ('content', 'user__email', 'post__title')
 
-    @display(
-        description="สถานะตรวจสอบ",
-        label={
-            "APPROVED": "success",
-            "PENDING": "warning",
-            "REJECTED": "danger",
-        }
-    )
     def moderation_badge(self, obj):
         return obj.moderation_status
+    moderation_badge.short_description = "สถานะตรวจสอบ"
 
 
 @admin.register(PostLike)
-class PostLikeAdmin(ModelAdmin):
+class PostLikeAdmin(admin.ModelAdmin):
     list_display = ('id', 'post', 'user', 'created_at')
     search_fields = ('user__email', 'post__title')

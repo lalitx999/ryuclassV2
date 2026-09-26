@@ -2,14 +2,12 @@ from django.contrib import admin, messages
 from django.utils.safestring import mark_safe
 from django.utils import timezone
 from datetime import timedelta
-from unfold.admin import ModelAdmin
-from unfold.decorators import display
 from .models import Payment, SlipBlacklistPattern, SlipVerificationLog
 from courses.models import Enrollment
 from courses.services import AccessService
 
 @admin.register(Payment)
-class PaymentAdmin(ModelAdmin):
+class PaymentAdmin(admin.ModelAdmin):
     list_display = ('id', 'user_info', 'amount_display', 'course', 'status_badge', 'is_renewal', 'submitted_at')
     list_filter = ('status', 'submitted_at', 'reviewed_at', 'level_access')
     search_fields = ('user__email', 'user__name', 'course__title', 'trans_ref')
@@ -23,22 +21,14 @@ class PaymentAdmin(ModelAdmin):
         ("หลักฐานสลิป", {'fields': ('slip_path', 'slip_preview')}),
     )
 
-    @display(description="ผู้ชำระเงิน")
     def user_info(self, obj):
         return f"{obj.user.name or obj.user.email} ({obj.user.email})"
+    user_info.short_description = "ผู้ชำระเงิน"
 
-    @display(description="ยอดชำระ")
     def amount_display(self, obj):
         return f"฿{obj.amount:,.2f}"
+    amount_display.short_description = "ยอดชำระ"
 
-    @display(
-        description="สถานะ",
-        label={
-            "approved": "success",
-            "pending": "warning",
-            "rejected": "danger",
-        }
-    )
     def status_badge(self, obj):
         labels = {
             "approved": "อนุมัติแล้ว",
@@ -46,6 +36,7 @@ class PaymentAdmin(ModelAdmin):
             "rejected": "ปฏิเสธ",
         }
         return labels.get(obj.status, obj.status)
+    status_badge.short_description = "สถานะ"
 
     def slip_preview(self, obj):
         if obj.slip_path:
@@ -137,26 +128,18 @@ class PaymentAdmin(ModelAdmin):
 
 
 @admin.register(SlipBlacklistPattern)
-class SlipBlacklistPatternAdmin(ModelAdmin):
+class SlipBlacklistPatternAdmin(admin.ModelAdmin):
     list_display = ('id', 'pattern', 'type', 'created_at')
     list_filter = ('type', 'created_at')
     search_fields = ('pattern', 'description')
 
 
 @admin.register(SlipVerificationLog)
-class SlipVerificationLogAdmin(ModelAdmin):
+class SlipVerificationLogAdmin(admin.ModelAdmin):
     list_display = ('id', 'payment', 'user', 'status_badge', 'verified_amount', 'verified_bank', 'verified_at')
     list_filter = ('status', 'verified_bank', 'verified_at')
     search_fields = ('user__email', 'payment__id', 'verified_account')
 
-    @display(
-        description="สถานะตรวจสลิป",
-        label={
-            "approved": "success",
-            "pending": "warning",
-            "rejected": "danger",
-            "suspicious": "danger",
-        }
-    )
     def status_badge(self, obj):
         return obj.status
+    status_badge.short_description = "สถานะตรวจสลิป"

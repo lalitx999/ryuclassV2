@@ -1,21 +1,19 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from unfold.admin import ModelAdmin, TabularInline
-from unfold.decorators import display
 from .models import User
 from courses.models import Enrollment
 from courses.services import AccessService
 
-class EnrollmentInline(TabularInline):
+class EnrollmentInline(admin.TabularInline):
     model = Enrollment
     extra = 1
     fields = ('course', 'status', 'is_active', 'is_lifetime_video', 'video_expires_at', 'zoom_expires_at')
     autocomplete_fields = ('course',)
 
 @admin.register(User)
-class UserAdmin(BaseUserAdmin, ModelAdmin):
+class UserAdmin(BaseUserAdmin):
     ordering = ('email',)
-    list_display = ('email', 'name', 'role_badge', 'total_spent_display', 'is_staff', 'is_active_badge')
+    list_display = ('email', 'name', 'role_badge', 'total_spent_display', 'is_staff', 'is_active')
     list_filter = ('role', 'is_staff', 'is_superuser', 'is_active')
     inlines = [EnrollmentInline]
     
@@ -35,27 +33,14 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
     filter_horizontal = ('groups', 'user_permissions')
     actions = ['send_broadcast_email_action']
 
-    @display(
-        description="บทบาท",
-        label={
-            "admin": "danger",
-            "student": "info",
-        }
-    )
     def role_badge(self, obj):
         labels = {"admin": "ผู้ดูแลระบบ (Admin)", "student": "นักเรียน (Student)"}
         return labels.get(obj.role, obj.role)
+    role_badge.short_description = "บทบาท"
 
-    @display(
-        description="สถานะบัญชี",
-        boolean=True,
-    )
-    def is_active_badge(self, obj):
-        return obj.is_active
-
-    @display(description="ยอดซื้อสะสม")
     def total_spent_display(self, obj):
         return f"฿{obj.total_spent:,.2f}"
+    total_spent_display.short_description = "ยอดซื้อสะสม"
 
     @admin.action(description='📧 บรอดแคสต์ส่งอีเมลหาผู้ใช้ที่เลือก (Hostinger SMTP)')
     def send_broadcast_email_action(self, request, queryset):
