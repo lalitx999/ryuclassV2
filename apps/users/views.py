@@ -271,6 +271,9 @@ class ProfileView(APIView):
                 'zoom_expires_at': e.zoom_expires_at,
             })
             
+        from courses.services import AccessService
+        lifetime_progress = AccessService.get_tier_progress(user.total_spent)
+
         return Response({
             'id': user.id,
             'email': user.email,
@@ -279,8 +282,9 @@ class ProfileView(APIView):
             'phone': user.phone,
             'total_spent': user.total_spent,
             'is_affiliate': user.is_affiliate,
-            'courses_access': courses_access
-        }, status=status.HTTP_200_REST_OK if hasattr(status, 'HTTP_200_REST_OK') else status.HTTP_200_OK)
+            'courses_access': courses_access,
+            'lifetime_progress': lifetime_progress
+        }, status=status.HTTP_200_OK)
 
     def post(self, request):
         user = request.user

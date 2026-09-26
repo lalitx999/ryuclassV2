@@ -11,6 +11,36 @@
 <div class="col"><div class="card"><div class="card-body"><dl class="row">
 {% for label,value in fields %}<dt class="col-sm-4">{{ label }}</dt><dd class="col-sm-8 text-break">{{ value|linebreaksbr }}</dd>{% endfor %}
 </dl></div></div></div></div>
+{% if tier_info %}
+<div class="card card-primary card-outline mb-3">
+  <div class="card-header font-weight-bold">💎 ความคืบหน้าระดับสะสม Lifetime</div>
+  <div class="card-body">
+    {% if tier_info.is_max_tier %}
+      <div class="alert alert-success mb-0 font-weight-bold">
+        🏆 N1 Lifetime (สิทธิ์สูงสุด) — {{ tier_info.summary_text }}
+      </div>
+    {% else %}
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <span class="badge badge-primary px-2 py-1">ระดับปัจจุบัน: {{ tier_info.current_level|default:"เริ่มต้น" }}</span>
+          <span class="ml-2 font-weight-bold">➔ เป้าหมายถัดไป: <span class="badge badge-warning px-2 py-1">{{ tier_info.next_level }}</span></span>
+        </div>
+        <div class="font-weight-bold text-muted small">
+          ยอดสะสม ฿{{ tier_info.total_spent|floatformat:2 }} / ฿{{ tier_info.next_threshold|floatformat:2 }}
+        </div>
+      </div>
+      <div class="progress mb-2" style="height: 18px; border-radius: 9px;">
+        <div class="progress-bar progress-bar-striped progress-bar-animated bg-info font-weight-bold" role="progressbar" style="width: {{ tier_info.progress_percent }}%;">
+          {{ tier_info.progress_percent }}%
+        </div>
+      </div>
+      <div class="text-right text-danger font-weight-bold small">
+        ขาดอีก ฿{{ tier_info.remaining_amount|floatformat:2 }} เพื่อปลดล็อกสิทธิ์ {{ tier_info.next_level }} Lifetime
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
 {% if name == 'payment' and can_change and obj.status == 'pending' %}
 <div class="card card-warning"><div class="card-header">ผลตรวจสอบสลิป</div>
 <form method="post" action="{% url 'backoffice:payment-review' obj.pk %}" data-confirm="ยืนยันผลตรวจสอบสลิป?">{% csrf_token %}

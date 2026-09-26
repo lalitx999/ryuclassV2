@@ -13,6 +13,68 @@ class AccessService:
     }
 
     @staticmethod
+    def get_tier_progress(total_spent: float) -> dict:
+        """
+        Calculate lifetime tier status, progress percentage, next tier goal and remaining amount.
+        """
+        total = float(total_spent or 0.0)
+        sorted_thresholds = sorted(AccessService.LIFETIME_THRESHOLDS.items(), key=lambda x: x[0])
+        
+        current_level = None
+        for amt, lvl in sorted_thresholds:
+            if total >= amt:
+                current_level = lvl
+
+        next_threshold = None
+        next_level = None
+        for amt, lvl in sorted_thresholds:
+            if total < amt:
+                next_threshold = amt
+                next_level = lvl
+                break
+
+        if next_threshold is None:
+            max_amt = sorted_thresholds[-1][0]
+            return {
+                'total_spent': total,
+                'current_level': 'N1',
+                'next_level': None,
+                'next_threshold': max_amt,
+                'remaining_amount': 0.0,
+                'progress_percent': 100.0,
+                'overall_progress_percent': 100.0,
+                'is_max_tier': True,
+                'badge_label': 'N1 Lifetime (สิทธิ์สูงสุด)',
+                'summary_text': '🎉 ได้รับสิทธิ์เรียนตลอดชีพครบทุกระดับแล้ว!'
+            }
+
+        prev_amt = 0.0
+        for amt, _ in sorted_thresholds:
+            if amt < next_threshold:
+                prev_amt = amt
+
+        range_total = next_threshold - prev_amt
+        range_current = total - prev_amt
+        progress_pct = max(0.0, min(100.0, (range_current / range_total) * 100.0)) if range_total > 0 else 0.0
+        remaining = next_threshold - total
+
+        badge_label = f"{current_level} Lifetime" if current_level else "เริ่มต้นสะสม"
+        summary_text = f"ยอดสะสม ฿{total:,.0f} / ฿{next_threshold:,.0f} (ขาดอีก ฿{remaining:,.0f} ปลดล็อก {next_level})"
+
+        return {
+            'total_spent': total,
+            'current_level': current_level,
+            'next_level': next_level,
+            'next_threshold': next_threshold,
+            'remaining_amount': remaining,
+            'progress_percent': round(progress_pct, 1),
+            'overall_progress_percent': round(min(100.0, (total / next_threshold) * 100.0), 1),
+            'is_max_tier': False,
+            'badge_label': badge_label,
+            'summary_text': summary_text
+        }
+
+    @staticmethod
     def has_video_access(user_id: int, level: str = 'N5') -> bool:
         """
         Check if user has active video access for a course level

@@ -65,8 +65,8 @@ class StudentForm(RecordForm):
                                    help_text='เว้นว่างเพื่อใช้รหัสเดิม')
     class Meta:
         model = get_user_model()
-        fields = ['email', 'name', 'nickname', 'phone', 'telegram_chat_id', 'is_affiliate', 'role', 'is_active', 'is_staff',
-                  'is_superuser', 'email_verified', 'groups', 'user_permissions']
+        fields = ['email', 'name', 'nickname', 'phone', 'telegram_chat_id', 'total_spent', 'is_affiliate', 'role', 'is_active', 'is_staff',
+                  'is_superuser', 'email_verified']
 
     def clean_new_password(self):
         password = self.cleaned_data.get('new_password')

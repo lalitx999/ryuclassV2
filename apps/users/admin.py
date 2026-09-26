@@ -13,15 +13,16 @@ class EnrollmentInline(admin.TabularInline):
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     ordering = ('email',)
-    list_display = ('email', 'name', 'role_badge', 'total_spent_display', 'is_staff', 'is_active')
+    list_display = ('email', 'name', 'role_badge', 'total_spent_display', 'lifetime_tier_badge', 'is_staff', 'is_active')
     list_filter = ('role', 'is_staff', 'is_superuser', 'is_active')
     inlines = [EnrollmentInline]
+    readonly_fields = ('lifetime_progress_summary',)
     
     fieldsets = (
         ("เข้าสู่ระบบ & บัญชี", {'fields': ('email', 'password')}),
         ("ข้อมูลส่วนตัว", {'fields': ('name', 'nickname', 'phone', 'telegram_chat_id')}),
-        ("สิทธิ์ในระบบ", {'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        ("ข้อมูล RyuClass", {'fields': ('total_spent', 'is_affiliate', 'email_verified')}),
+        ("สิทธิ์ในระบบ", {'fields': ('role', 'is_active', 'is_staff', 'is_superuser')}),
+        ("ข้อมูล RyuClass & ระดับสะสม", {'fields': ('total_spent', 'lifetime_progress_summary', 'is_affiliate', 'email_verified')}),
     )
     add_fieldsets = (
         (None, {
@@ -30,7 +31,6 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
     search_fields = ('email', 'name', 'phone')
-    filter_horizontal = ('groups', 'user_permissions')
     actions = ['send_broadcast_email_action']
 
     def role_badge(self, obj):
@@ -41,6 +41,54 @@ class UserAdmin(BaseUserAdmin):
     def total_spent_display(self, obj):
         return f"฿{obj.total_spent:,.2f}"
     total_spent_display.short_description = "ยอดซื้อสะสม"
+
+    def lifetime_tier_badge(self, obj):
+        from courses.services import AccessService
+        from django.utils.html import format_html
+        info = AccessService.get_tier_progress(obj.total_spent)
+        if info['is_max_tier']:
+            return format_html('<span style="background:#198754; color:#fff; padding:3px 8px; border-radius:10px; font-weight:bold; font-size:11px;">💎 N1 Lifetime</span>')
+        if info['current_level']:
+            return format_html('<span style="background:#0d6efd; color:#fff; padding:3px 8px; border-radius:10px; font-size:11px;">⭐ {} (ขาด ฿{:,.0f})</span>', info['current_level'], float(info['remaining_amount']))
+        return format_html('<span style="background:#6c757d; color:#fff; padding:3px 8px; border-radius:10px; font-size:11px;">เริ่มต้น (ขาด ฿{:,.0f})</span>', float(info['remaining_amount']))
+    lifetime_tier_badge.short_description = "ระดับสะสม Lifetime"
+
+    def lifetime_progress_summary(self, obj):
+        from courses.services import AccessService
+        from django.utils.html import format_html
+        info = AccessService.get_tier_progress(obj.total_spent)
+        
+        if info['is_max_tier']:
+            return format_html(
+                '<div style="padding:12px; background:#d1e7dd; color:#0f5132; border-radius:8px; border:1px solid #badbcc;">'
+                '<strong style="font-size:14px;">🏆 N1 Lifetime (สิทธิ์สูงสุด)</strong><br>'
+                '<span style="font-size:12px;">{}</span>'
+                '</div>',
+                info['summary_text']
+            )
+        
+        current = info['current_level'] or 'ยังไม่มีสิทธิ์'
+        next_lvl = info['next_level']
+        pct = info['progress_percent']
+        rem = info['remaining_amount']
+        
+        return format_html(
+            '<div style="padding:12px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:8px; max-width:550px;">'
+            '<div style="margin-bottom:6px; font-size:13px;">'
+            '🏷️ <strong>ระดับปัจจุบัน:</strong> <span style="background:#0d6efd; color:#fff; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:bold;">{}</span> '
+            '➔ <strong>เป้าหมายถัดไป:</strong> <span style="background:#ffc107; color:#000; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:bold;">{}</span>'
+            '</div>'
+            '<div style="margin-bottom:8px; font-size:12px; color:#495057;">'
+            'ยอดสะสมปัจจุบัน: <strong>฿{:,.2f}</strong> / ฿{:,.2f} (ขาดอีก <strong style="color:#dc3545;">฿{:,.2f}</strong>)'
+            '</div>'
+            '<div style="width:100%; background:#e9ecef; height:12px; border-radius:6px; overflow:hidden;">'
+            '<div style="width:{}%; background:linear-gradient(90deg, #0d6efd, #0dcaf0); height:100%;"></div>'
+            '</div>'
+            '<div style="font-size:11px; color:#6c757d; margin-top:4px; text-align:right;">ความคืบหน้าระดับนี้: {}%</div>'
+            '</div>',
+            current, next_lvl, float(obj.total_spent), float(info['next_threshold']), float(rem), pct, pct
+        )
+    lifetime_progress_summary.short_description = "สรุปความคืบหน้าสะสมสิทธิ์ Lifetime"
 
     @admin.action(description='📧 บรอดแคสต์ส่งอีเมลหาผู้ใช้ที่เลือก (Hostinger SMTP)')
     def send_broadcast_email_action(self, request, queryset):

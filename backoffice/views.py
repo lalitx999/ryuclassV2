@@ -164,10 +164,15 @@ def detail(request, app, name, pk):
         target = catalogue().get(f'{target_app}/{target_name}')
         if target and allowed(request.user, target):
             related_links.append({'label': LABELS[target_name], 'url': reverse('backoffice:list', args=[target_app, target_name]) + '?' + field + '=' + quote(str(pk))})
+    tier_info = None
+    if name == 'user':
+        from courses.services import AccessService
+        tier_info = AccessService.get_tier_progress(obj.total_spent)
+
     return page(request, 'detail.html', title=LABELS[name], app=app, name=name, obj=obj, related_links=related_links,
         actions=[(key, action[0]) for key, action in ACTIONS.get(name, {}).items()],
         fields=[(f.verbose_name, display(obj, f)) for f in visible_fields(model)], logs=logs,
-        can_change=allowed(request.user, model, 'change'), can_delete=allowed(request.user, model, 'delete'), slip_url=slip_url)
+        can_change=allowed(request.user, model, 'change'), can_delete=allowed(request.user, model, 'delete'), slip_url=slip_url, tier_info=tier_info)
 
 
 @staff
