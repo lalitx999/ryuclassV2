@@ -47,6 +47,8 @@ class Lesson(models.Model):
     description = models.TextField(blank=True, null=True)
     video_url = models.TextField(blank=True, null=True, help_text="AES-256 encrypted URL")
     duration = models.IntegerField(default=0, help_text="seconds")
+    pdf_file = models.FileField(upload_to='pdfs/', blank=True, null=True, help_text="ไฟล์เอกสารประกอบการเรียน (PDF)")
+    pdf_title = models.CharField(max_length=255, blank=True, null=True, help_text="ชื่อเอกสารแนบ (เช่น เอกสารประกอบการเรียน N5)")
     sort_order = models.IntegerField(default=0)
     is_free = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)

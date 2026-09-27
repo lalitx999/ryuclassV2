@@ -169,10 +169,16 @@ def detail(request, app, name, pk):
         from courses.services import AccessService
         tier_info = AccessService.get_tier_progress(obj.total_spent)
 
+    easyslip_log = None
+    if name == 'payment':
+        from payments.models import SlipVerificationLog
+        easyslip_log = SlipVerificationLog.objects.filter(payment=obj).order_by('-verified_at').first()
+
     return page(request, 'detail.html', title=LABELS[name], app=app, name=name, obj=obj, related_links=related_links,
         actions=[(key, action[0]) for key, action in ACTIONS.get(name, {}).items()],
         fields=[(f.verbose_name, display(obj, f)) for f in visible_fields(model)], logs=logs,
-        can_change=allowed(request.user, model, 'change'), can_delete=allowed(request.user, model, 'delete'), slip_url=slip_url, tier_info=tier_info)
+        can_change=allowed(request.user, model, 'change'), can_delete=allowed(request.user, model, 'delete'),
+        slip_url=slip_url, tier_info=tier_info, easyslip_log=easyslip_log)
 
 
 @staff
@@ -265,3 +271,117 @@ def review_payment(request, pk):
             audit(request, payment, CHANGE, 'อนุมัติการชำระเงิน' if action == 'approve' else 'ปฏิเสธการชำระเงิน')
             messages.success(request, 'บันทึกผลตรวจสลิปแล้ว')
     return redirect('backoffice:detail', 'payments', 'payment', pk)
+
+
+import csv
+from django.http import HttpResponse, JsonResponse
+from django.conf import settings
+
+@staff
+def export_csv(request, app, name):
+    model = resolve(request, app, name)
+    fields = visible_fields(model)
+    by_name = {f.name: f for f in fields}
+    columns = [by_name[n] for n in COLUMNS.get(name, []) if n in by_name] or fields[:8]
+    
+    query = model.objects.all().order_by('-pk')
+    relations = [f.name for f in fields if isinstance(f, models.ForeignKey)]
+    if relations:
+        query = query.select_related(*relations)
+        
+    q = request.GET.get('q', '').strip()[:200]
+    if q:
+        condition = Q()
+        for f in fields:
+            if isinstance(f, (models.CharField, models.TextField)):
+                condition |= Q(**{f'{f.name}__icontains': q})
+        if condition:
+            query = query.filter(condition)
+            
+    for f in fields:
+        options = list(f.choices) if f.choices else ([('1', 'ใช่'), ('0', 'ไม่ใช่')] if isinstance(f, models.BooleanField) else [])
+        if options:
+            value = request.GET.get(f.name, '')
+            if value in [str(k) for k, _ in options]:
+                query = query.filter(**{f.name: value == '1' if isinstance(f, models.BooleanField) else value})
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="{name}_export.csv"'
+    
+    # Write UTF-8 BOM so Excel opens Thai characters correctly
+    response.write('\ufeff')
+    writer = csv.writer(response)
+    
+    # Write Header
+    writer.writerow([f.verbose_name or f.name for f in columns])
+    
+    # Write Rows
+    for obj in query:
+        writer.writerow([display(obj, f) for f in columns])
+        
+    return response
+
+
+@staff
+def broadcast_email_composer(request):
+    from courses.models import Course, Enrollment
+    from django.core.mail import EmailMultiAlternatives
+    from users.models import User
+
+    courses = Course.objects.filter(is_active=True).order_by('sort_order')
+    
+    if request.method == 'POST':
+        target = request.POST.get('target', 'all')
+        subject = request.POST.get('subject', '').strip()
+        body = request.POST.get('body', '').strip()
+        
+        if not subject or not body:
+            messages.error(request, 'กรุณากรอกหัวข้อและเนื้อหาอีเมลให้ครบถ้วน')
+        else:
+            recipients = User.objects.filter(role='student', is_active=True)
+            if target.startswith('course_'):
+                course_id = target.replace('course_', '')
+                user_ids = Enrollment.objects.filter(course_id=course_id, is_active=True).values_list('user_id', flat=True)
+                recipients = recipients.filter(id__in=user_ids)
+            elif target == 'active':
+                user_ids = Enrollment.objects.filter(is_active=True, status='ACTIVE').values_list('user_id', flat=True)
+                recipients = recipients.filter(id__in=user_ids)
+            elif target == 'expired':
+                user_ids = Enrollment.objects.filter(status='EXPIRED').values_list('user_id', flat=True)
+                recipients = recipients.filter(id__in=user_ids)
+                
+            email_list = list(recipients.values_list('email', flat=True).distinct())
+            
+            if not email_list:
+                messages.warning(request, 'ไม่พบอีเมลผู้เรียนในกลุ่มที่เลือก')
+            else:
+                sent_success = 0
+                for email_addr in email_list:
+                    try:
+                        msg = EmailMultiAlternatives(
+                            subject=subject,
+                            body=body,
+                            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'support@chatbotth.me'),
+                            to=[email_addr]
+                        )
+                        msg.attach_alternative(body.replace('\n', '<br>'), "text/html")
+                        msg.send(fail_silently=True)
+                        sent_success += 1
+                    except Exception:
+                        pass
+                        
+                audit(request, request.user, CHANGE, f'ส่งอีเมลบรอดแคสต์ถึง {sent_success} คน: {subject}')
+                messages.success(request, f'ส่งอีเมลสำเร็จ {sent_success} / {len(email_list)} บัญชีเรียบร้อยแล้ว!')
+                return redirect('backoffice:broadcast-email')
+                
+    return page(request, 'broadcast_email.html', title='บรอดแคสต์อีเมล (Broadcast Email)', courses=courses)
+
+
+@staff
+def search_users_api(request):
+    q = request.GET.get('q', '').strip()
+    users = get_user_model().objects.filter(role='student')
+    if q:
+        users = users.filter(Q(email__icontains=q) | Q(name__icontains=q) | Q(phone__icontains=q))
+    data = [{'id': u.id, 'text': f"{u.name or u.email} ({u.email})"} for u in users[:30]]
+    return JsonResponse({'results': data})

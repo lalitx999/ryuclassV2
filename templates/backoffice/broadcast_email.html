@@ -1,0 +1,48 @@
+{% extends 'backoffice/base.html' %}
+{% block content %}
+<div class="row">
+  <div class="col-md-10 offset-md-1 col-lg-8 offset-lg-2">
+    <div class="card card-primary">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-paper-plane mr-2"></i>สร้างอีเมลบรอดแคสต์ (Broadcast Email Composer)</h3>
+      </div>
+      <form method="post" action="{% url 'backoffice:broadcast-email' %}">
+        {% csrf_token %}
+        <div class="card-body">
+          <div class="form-group">
+            <label for="target"><i class="fas fa-users mr-1"></i>กลุ่มเป้าหมายผู้เรียน (Target Audience)</label>
+            <select name="target" id="target" class="form-control">
+              <option value="all">นักเรียนทั้งหมด (Active Students)</option>
+              <option value="active">นักเรียนที่มีคอร์สเรียนปัจจุบัน (Active Enrollment)</option>
+              <option value="expired">นักเรียนที่คอร์สหมดอายุแล้ว (Expired Enrollment)</option>
+              <optgroup label="แบ่งตามคอร์สเรียน (Course Specific)">
+                {% for course in courses %}
+                  <option value="course_{{ course.id }}">ผู้เรียนคอร์ส: {{ course.title }}</option>
+                {% endfor %}
+              </optgroup>
+            </select>
+            <small class="form-text text-muted">ระบบจะส่งอีเมลหาเฉพาะผู้เรียนที่ตรงกับเงื่อนไขข้างต้นโดยไม่ส่งซ้ำ</small>
+          </div>
+
+          <div class="form-group">
+            <label for="subject"><i class="fas fa-heading mr-1"></i>หัวข้ออีเมล (Subject)</label>
+            <input type="text" name="subject" id="subject" class="form-control" placeholder="เช่น แจ้งเตือนอัปเดตบทเรียนใหม่ หรือโปรโมชันต้อนรับเดือนใหม่" required>
+          </div>
+
+          <div class="form-group">
+            <label for="body"><i class="fas fa-envelope-open-text mr-1"></i>เนื้อหาอีเมล (Message Content)</label>
+            <textarea name="body" id="body" rows="10" class="form-control" placeholder="พิมพ์ข้อความที่ต้องการส่งหานักเรียนที่นี่..." required></textarea>
+            <small class="form-text text-muted">สามารถขึ้นบรรทัดใหม่ได้ตามปกติ ระบบจะแปลงเป็น HTML ให้อัตโนมัติ</small>
+          </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between">
+          <a href="{% url 'backoffice:dashboard' %}" class="btn btn-secondary"><i class="fas fa-arrow-left mr-1"></i>ย้อนกลับ</a>
+          <button type="submit" class="btn btn-primary font-weight-bold" onclick="return confirm('ยืนยันการส่งอีเมลบรอดแคสต์หาผู้เรียนกลุ่มนี้ใช่หรือไม่?');">
+            <i class="fas fa-paper-plane mr-1"></i>ส่งอีเมลบรอดแคสต์ทันที
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

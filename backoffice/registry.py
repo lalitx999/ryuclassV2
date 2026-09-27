@@ -60,6 +60,8 @@ def menu(user):
         items = [{'key': key, 'label': LABELS[model._meta.model_name]}
                  for key, model in catalogue().items()
                  if model._meta.app_label == app and allowed(user, model)]
+        if app == 'users' and user.is_superuser:
+            items.append({'key': 'broadcast-email', 'label': '📢 บรอดแคสต์อีเมล', 'url': '/admin/broadcast-email/'})
         if items:
             groups.append({'label': label, 'items': items})
     return groups

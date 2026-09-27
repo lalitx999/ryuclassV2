@@ -156,6 +156,13 @@ class CourseDetailView(APIView):
                 if has_access or lesson.is_free:
                     video_url = to_embed_url(decrypt_video_url(lesson.video_url))
                     
+                pdf_url = None
+                if (has_access or lesson.is_free) and lesson.pdf_file:
+                    try:
+                        pdf_url = request.build_absolute_uri(lesson.pdf_file.url)
+                    except Exception:
+                        pdf_url = None
+
                 result_lessons.append({
                     'id': lesson.id,
                     'title': lesson.title,
@@ -165,6 +172,8 @@ class CourseDetailView(APIView):
                     'video_time': video_time,
                     'is_completed': is_completed,
                     'video_url': video_url if (has_access or lesson.is_free) else None,
+                    'pdf_url': pdf_url,
+                    'pdf_title': lesson.pdf_title or 'เอกสารประกอบการเรียน (PDF)',
                     'locked': not (has_access or lesson.is_free)
                 })
                 
