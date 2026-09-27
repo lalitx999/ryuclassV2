@@ -11,7 +11,7 @@ from django.utils import timezone
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
-from .models import Course, Module, Lesson, Enrollment, Progress, Note, GameScore
+from .models import Course, Module, Lesson, Enrollment, Progress, Note, GameScore, ensure_notes_table_exists, ensure_game_scores_table_exists
 from .services import AccessService
 from config.ai import get_provider_config
 from support.models import AraigoguSession, AraigoguMessage
@@ -362,11 +362,15 @@ class NoteView(APIView):
 
     def get(self, request, lesson_id):
         user = request.user
+        ensure_notes_table_exists()
         try:
             note = Note.objects.get(user=user, lesson_id=lesson_id)
             text = note.content or ''
             return Response({'content': text, 'note_text': text, 'updated_at': note.updated_at.strftime('%H:%M:%S')})
         except Note.DoesNotExist:
+            return Response({'content': '', 'note_text': ''})
+        except Exception:
+            ensure_notes_table_exists()
             return Response({'content': '', 'note_text': ''})
 
     def post(self, request):
@@ -375,16 +379,25 @@ class NoteView(APIView):
         raw_content = request.data.get('content')
         content = raw_content if raw_content is not None else request.data.get('note_text', '')
 
+        ensure_notes_table_exists()
         try:
             lesson = Lesson.objects.get(id=lesson_id)
         except Lesson.DoesNotExist:
             return Response({'error': 'ไม่พบบทเรียน'}, status=status.HTTP_404_NOT_FOUND)
 
-        note, created = Note.objects.get_or_create(
-            user=user,
-            lesson=lesson,
-            defaults={'content': content}
-        )
+        try:
+            note, created = Note.objects.get_or_create(
+                user=user,
+                lesson=lesson,
+                defaults={'content': content}
+            )
+        except Exception:
+            ensure_notes_table_exists()
+            note, created = Note.objects.get_or_create(
+                user=user,
+                lesson=lesson,
+                defaults={'content': content}
+            )
 
         if not created:
             note.content = content

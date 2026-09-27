@@ -95,6 +95,42 @@ class Progress(models.Model):
     def __str__(self):
         return f"User {self.user.email} -> Lesson {self.lesson.title} ({self.video_time}s)"
 
+def ensure_notes_table_exists():
+    from django.db import connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS notes (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    lesson_id INT NOT NULL,
+                    content LONGTEXT,
+                    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+                    UNIQUE KEY user_lesson_unique (user_id, lesson_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+    except Exception:
+        pass
+
+def ensure_game_scores_table_exists():
+    from django.db import connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS game_scores (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NULL,
+                    player_name VARCHAR(50) NOT NULL DEFAULT '',
+                    game_mode VARCHAR(50) NOT NULL DEFAULT 'kana',
+                    jlpt_level VARCHAR(2) NOT NULL DEFAULT 'N5',
+                    score INT NOT NULL DEFAULT 0,
+                    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+    except Exception:
+        pass
+
 class Note(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='personal_notes', db_column='user_id')
@@ -126,3 +162,4 @@ class GameScore(models.Model):
     def __str__(self):
         name = self.user.email if self.user else self.player_name
         return f"Score {self.score} ({self.game_mode}/{self.jlpt_level}) by {name}"
+

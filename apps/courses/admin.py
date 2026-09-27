@@ -73,10 +73,24 @@ class ProgressAdmin(admin.ModelAdmin):
     search_fields = ('user__email', 'lesson__title')
 
 
+from .models import Course, Module, Lesson, Enrollment, Progress, Note, GameScore, ensure_notes_table_exists, ensure_game_scores_table_exists
+
 @admin.register(Note)
 class NoteAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'lesson', 'updated_at')
     search_fields = ('user__email', 'lesson__title', 'content')
+
+    def get_queryset(self, request):
+        ensure_notes_table_exists()
+        try:
+            return super().get_queryset(request)
+        except Exception:
+            ensure_notes_table_exists()
+            return super().get_queryset(request)
+
+    def changelist_view(self, request, extra_context=None):
+        ensure_notes_table_exists()
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 @admin.register(GameScore)
@@ -84,3 +98,16 @@ class GameScoreAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'player_name', 'jlpt_level', 'game_mode', 'score', 'created_at')
     list_filter = ('jlpt_level', 'game_mode', 'created_at')
     search_fields = ('user__email', 'player_name', 'game_mode')
+
+    def get_queryset(self, request):
+        ensure_game_scores_table_exists()
+        try:
+            return super().get_queryset(request)
+        except Exception:
+            ensure_game_scores_table_exists()
+            return super().get_queryset(request)
+
+    def changelist_view(self, request, extra_context=None):
+        ensure_game_scores_table_exists()
+        return super().changelist_view(request, extra_context=extra_context)
+
