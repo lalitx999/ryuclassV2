@@ -13,12 +13,14 @@ from courses.views import (
 from quizzes.views import QuizDetailView, SubmitQuizView
 from payments.views import UploadSlipView
 
+from django.conf import settings
+
 urlpatterns = [
     path('admin/', include('backoffice.urls')),
     
     # Serve uploaded slips and community images in local development
     re_path(r'^storage/slips/(?P<path>.*)$', serve, {
-        'document_root': '/Applications/XAMPP/xamppfiles/htdocs/ryuclass/storage/slips/',
+        'document_root': settings.SLIPS_STORAGE_DIR,
     }),
     re_path(r'^storage/community/(?P<path>.*)$', serve, {
         'document_root': '/Users/tanchonl/Documents/ryu_new/backend/storage/community/',

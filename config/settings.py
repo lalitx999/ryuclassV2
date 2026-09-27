@@ -128,6 +128,12 @@ STATICFILES_DIRS = [
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
+# Storage directory for payment slips
+_default_slips_dir = '/mnt/hdd_backup/storage/php_app/uploads/slips'
+if not os.path.exists('/mnt/hdd_backup'):
+    _default_slips_dir = str(BASE_DIR / 'storage' / 'slips')
+SLIPS_STORAGE_DIR = os.getenv('SLIPS_STORAGE_DIR', _default_slips_dir)
+
 
 # CORS Config
 _cors_origins = os.getenv(

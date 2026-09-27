@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.utils import timezone
 
+from django.conf import settings
 from .models import Payment
 from courses.models import Course, Enrollment
 from users.utils import notify_admin_new_order
@@ -74,7 +75,7 @@ class UploadSlipView(APIView):
             ext = os.path.splitext(slip_file.name)[1] or '.jpg'
             filename = f"slip_{user.id}_{int(time.time())}{ext}"
             
-            storage_path = '/Applications/XAMPP/xamppfiles/htdocs/ryuclass/storage/slips/'
+            storage_path = getattr(settings, 'SLIPS_STORAGE_DIR', '/mnt/hdd_backup/storage/php_app/uploads/slips')
             os.makedirs(storage_path, exist_ok=True)
             target_path = os.path.join(storage_path, filename)
             
@@ -99,10 +100,14 @@ class UploadSlipView(APIView):
             # Notify Admin via Telegram
             notify_admin_new_order(
                 payment_id=payment.id,
-                student_name=user.name,
+                student_name=user.name or user.email,
                 student_email=user.email,
                 course_name=course.title,
-                amount=amount
+                amount=float(amount),
+                phone=getattr(user, 'phone', ''),
+                level=level,
+                duration=requested_days,
+                slip_file_path=target_path
             )
 
             return Response({
