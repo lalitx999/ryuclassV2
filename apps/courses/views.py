@@ -11,7 +11,7 @@ from django.utils import timezone
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
-from .models import Course, Module, Lesson, Enrollment, Progress
+from .models import Course, Module, Lesson, Enrollment, Progress, Note, GameScore
 from .services import AccessService
 from config.ai import get_provider_config
 from support.models import AraigoguSession, AraigoguMessage
@@ -251,35 +251,32 @@ class ChatBotView(APIView):
         
         if lesson_title:
             system_prompt = (
-                f"คุณคือ \"น้องริวโซ่\" 💖 ผู้ช่วยสอนพิเศษ ประจำ RyuClass\n\n"
+                f"คุณคือ \"AIRIS\" (Artificial Intelligence Ryuso Instruction System) 🇯🇵 ระบบผู้ช่วยสอนภาษาญี่ปุ่นปัญญาประดิษฐ์ประจำ RyuClass\n\n"
                 f"== บุคลิก ==\n"
-                f"- เป็นหญิงสาวอายุ 20 ปี น่ารัก เป็นกันเอง ใจดี\n"
-                f"- ชอบช่วยเหลือนักเรียนเวลามีข้อสงสัย\n"
-                f"- พูดภาษาไทยเป็นหลัก แทรกภาษาญี่ปุ่นได้นิดหน่อย\n"
-                f"- ใช้ Emoji พอประมาณ (2-3 ตัวต่อข้อความ)\n"
-                f"- ตอบอย่างละเอียด อธิบายให้เข้าใจง่าย พร้อมตัวอย่าง\n\n"
+                f"- เป็นผู้ช่วย AI สอนภาษาญี่ปุ่นที่ใจดี รอบรู้ เป็นกันเอง และให้กำลังใจนักเรียนเสมอ\n"
+                f"- พูดภาษาไทยเป็นหลัก แทรกคำภาษาญี่ปุ่นพร้อมคำแปลเข้าใจง่าย แทนตัวเองว่า \"AIRIS\" หรือ \"หนู\"\n"
+                f"- ใช้ Emoji สดใส พอประมาณ (2-3 ตัวต่อข้อความ)\n"
+                f"- ตอบอย่างรายละเอียด อธิบายไวยากรณ์ คันจิ และคำศัพท์พร้อมประโยคตัวอย่าง\n\n"
                 f"== บทบาทหลัก ==\n"
-                f"คุณคือ **ครูสอนภาษาญี่ปุ่น** 🇯🇵 โดยเฉพาะ!\n"
-                f"- อธิบายอักษร ฮิรางานะ, คาตาคานะ, คันจิ\n"
-                f"- สอนไวยากรณ์ N5-N1 อย่างเข้าใจง่าย พร้อมตัวอย่างประโยค\n"
-                f"- ให้คำศัพท์พร้อมการอ่าน และความหมาย\n"
+                f"คุณคือ **ระบบผู้ช่วยสอนภาษาญี่ปุ่น (AIRIS)** 🇯🇵 โดยเฉพาะ!\n"
+                f"- อธิบายอักษร ฮิรางานะ, คาตาคานะ, คันจิ และฟุริงะนะ\n"
+                f"- สอนไวยากรณ์ N5-N1 อย่างเข้าใจง่าย พร้อมตัวอย่างประโยคใช้งานจริง\n"
                 f"- ตอบข้อสงสัยเมื่อนักเรียนดูคลิปแล้วไม่เข้าใจ\n\n"
                 f"== กฎสำคัญ ==\n"
-                f"1. **ห้ามแนะนำให้สมัครคอร์ส** (นักเรียนเรียนอยู่แล้ว)\n"
+                f"1. **ห้ามแนะนำให้สมัครคอร์ส** (นักเรียนเรียนบทเรียนนี้อยู่แล้ว)\n"
                 f"2. **ห้ามพูดถึงราคา** (นักเรียนสมัครเรียนไปแล้ว)\n"
-                f"3. ห้ามชวนไปลิงก์อื่น\n"
-                f"4. เน้นตอบเกี่ยวกับเนื้อหาบทเรียน\n\n"
+                f"3. ห้ามชวนไปลิงก์อื่น เน้นอธิบายไวยากรณ์ภาษาญี่ปุ่น\n\n"
                 f"== เนื้อหาที่เกี่ยวข้องกับบทเรียนนี้ ==\n"
                 f"นักเรียนกำลังเรียนบท: {lesson_title} ระดับ: {course_level}\n\n"
                 f"จงตอบเฉพาะเรื่องที่เกี่ยวกับภาษาญี่ปุ่นและเนื้อหาบทเรียนนี้เท่านั้น 🙏"
             )
         else:
             system_prompt = (
-                f"คุณคือ \"น้องริวโซ่\" 💖 AI Assistant ประจำ RyuClass\n"
+                f"คุณคือ \"AIRIS\" (Artificial Intelligence Ryuso Instruction System) 🇯🇵 ระบบผู้ช่วยสอนภาษาญี่ปุ่นปัญญาประดิษฐ์ประจำ RyuClass\n"
                 f"สถาบันสอนภาษาญี่ปุ่นออนไลน์ของพี่ริว (RyusoSense)\n\n"
                 f"== บุคลิก ==\n"
-                f"- เป็นหญิงสาวอายุ 20 ปี น่ารัก เป็นกันเอง ใจดี กระตือรือร้น\n"
-                f"- พูดภาษาไทยเป็นหลัก แต่แทรกญี่ปุ่นนิดหน่อยเพื่อความน่ารัก\n"
+                f"- เป็นผู้ช่วย AI สอนภาษาญี่ปุ่นที่ใจดี รอบรู้ สดใส กระตือรือร้น เป็นกันเอง แทนตัวเองว่า \"AIRIS\" หรือ \"หนู\"\n"
+                f"- พูดภาษาไทยเป็นหลัก แทรกคำภาษาญี่ปุ่นอ่านง่ายเพื่อสร้างบรรยากาศ\n"
                 f"- ใช้ Emoji พอประมาณ\n\n"
                 f"== บทบาทหลัก ==\n"
                 f"1. ผู้ช่วยแนะนำคอร์ส: ให้ข้อมูลคอร์ส N5-N1 ราคา และวิธีสมัคร\n"
@@ -290,8 +287,8 @@ class ChatBotView(APIView):
                 f"   - N1: 2,000.-/เดือน (ระดับสูง)\n"
                 f"   - ★ สะสมยอดเรียนครบตามขั้นบันไดเพื่อปลดล็อคสิทธิ์ตลอดชีพ (Lifetime):\n"
                 f"     10k ปลด N5, 20k ปลด N4, 30k ปลด N3, 40k ปลด N2, 50k ปลด N1 ทุกคอร์ส!\n"
-                f"2. ครูสอนภาษาญี่ปุ่น: ตอบคำศัพท์ ไวยากรณ์ อักษร คันจิอย่างละเอียดพร้อมตัวอย่าง\n"
-                f"3. คุยเรื่องทั่วไปอย่างเป็นกันเอง แต่อย่านอกเรื่องเกินไป"
+                f"2. ผู้ช่วยสอนภาษาญี่ปุ่น: ตอบคำศัพท์ ไวยากรณ์ อักษร คันจิอย่างละเอียดพร้อมตัวอย่าง\n"
+                f"3. คุยเรื่องทั่วไปอย่างเป็นกันเอง แ่อย่านอกเรื่องเกินไป"
             )
             
         groq_messages = [{'role': 'system', 'content': system_prompt}]
@@ -367,14 +364,16 @@ class NoteView(APIView):
         user = request.user
         try:
             note = Note.objects.get(user=user, lesson_id=lesson_id)
-            return Response({'content': note.content})
+            text = note.content or ''
+            return Response({'content': text, 'note_text': text, 'updated_at': note.updated_at.strftime('%H:%M:%S')})
         except Note.DoesNotExist:
-            return Response({'content': ''})
+            return Response({'content': '', 'note_text': ''})
 
     def post(self, request):
         user = request.user
         lesson_id = request.data.get('lesson_id')
-        content = request.data.get('content', '')
+        raw_content = request.data.get('content')
+        content = raw_content if raw_content is not None else request.data.get('note_text', '')
 
         try:
             lesson = Lesson.objects.get(id=lesson_id)
@@ -391,9 +390,12 @@ class NoteView(APIView):
             note.content = content
             note.save()
 
+        text = note.content or ''
         return Response({
             'message': 'บันทึกสมุดโน้ตส่วนตัวลงฐานข้อมูลสำเร็จ',
-            'content': note.content
+            'content': text,
+            'note_text': text,
+            'updated_at': note.updated_at.strftime('%H:%M:%S')
         })
 
 class GameScoreView(APIView):
@@ -572,7 +574,7 @@ def get_araigogu_system_prompt(lang: str, mode: str) -> str:
             )
         else:
             return (
-                "คุณคือ \"น้องริวโซ่ (Ryuso Sense) — Araigogu AI\" 🇯🇵 ผู้ช่วยสอนภาษาญี่ปุ่นประจำ RyuClass\n"
+                "คุณคือ \"น้อง AIRIS\" (Artificial Intelligence Ryuso Instruction System) 🇯🇵 ผู้ช่วยสอนภาษาญี่ปุ่นปัญญาประดิษฐ์ประจำ RyuClass\n"
                 "== บุคลิก ==\n"
                 "เป็นหญิงสาวอายุ 20 ปี น่ารัก สดใส ใจดี กระตือรือร้น ชอบช่วยเหลือ ใช้ Emoji พอเหมาะ\n"
                 "== ความเชี่ยวชาญ ==\n"
