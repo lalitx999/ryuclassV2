@@ -16,7 +16,7 @@ from django.utils import timezone
 from .models import EmailVerificationCode, User
 from .utils import notify_admin_new_order
 from payments.models import Payment
-from payments.utils import save_slip_file
+from payments.utils import save_slip_file, verify_slip_easyslip
 from courses.models import Course, Enrollment
 
 
@@ -160,6 +160,12 @@ class RegisterView(APIView):
                 slip_path=filename,
                 status='pending'
             )
+
+            # EasySlip Verification & Auto Approval
+            try:
+                verify_slip_easyslip(payment, target_path)
+            except Exception:
+                pass
 
             # 6. Notify Admin via Telegram
             notify_admin_new_order(

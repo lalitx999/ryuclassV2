@@ -10,7 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from django.conf import settings
-from .utils import save_slip_file
+from .utils import save_slip_file, verify_slip_easyslip
 from .models import Payment
 from courses.models import Course, Enrollment
 from users.utils import notify_admin_new_order
@@ -89,6 +89,10 @@ class UploadSlipView(APIView):
                 discount_percent=discount_percent,
             )
 
+            # EasySlip Verification & Auto Approval
+            easyslip_ok, easyslip_msg, _ = verify_slip_easyslip(payment, target_path)
+            payment.refresh_from_db()
+
             # Notify Admin via Telegram
             notify_admin_new_order(
                 payment_id=payment.id,
@@ -102,9 +106,13 @@ class UploadSlipView(APIView):
                 slip_file_path=target_path
             )
 
+            response_msg = 'อัปโหลดสลิปและอนุมัติสิทธิ์การเรียนให้อัตโนมัติเรียบร้อยแล้ว!' if payment.status == 'approved' else 'อัปโหลดสลิปเรียบร้อยแล้ว กรุณารอแอดมินตรวจสอบสลิปภายใน 24 ชม.'
+
             return Response({
-                'message': 'อัปโหลดสลิปเรียบร้อยแล้ว กรุณารอแอดมินตรวจสอบสลิปภายใน 24 ชม.',
-                'payment_id': payment.id
+                'message': response_msg,
+                'payment_id': payment.id,
+                'status': payment.status,
+                'verification_message': easyslip_msg
             }, status=status.HTTP_201_CREATED)
 
         except Exception as e:
