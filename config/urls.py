@@ -30,11 +30,25 @@ def serve_slip(request, path):
         
     raise Http404("Slip file not found")
 
+def serve_pdf(request, path):
+    primary_dir = getattr(settings, 'PDF_STORAGE_DIR', str(settings.BASE_DIR / 'storage' / 'protected_pdfs'))
+    primary_file = os.path.join(primary_dir, path)
+    if os.path.exists(primary_file):
+        return serve(request, path, document_root=primary_dir)
+
+    fallback_dir = str(settings.BASE_DIR / 'storage' / 'protected_pdfs')
+    fallback_file = os.path.join(fallback_dir, path)
+    if os.path.exists(fallback_file):
+        return serve(request, path, document_root=fallback_dir)
+
+    raise Http404("PDF file not found")
+
 urlpatterns = [
     path('admin/', include('backoffice.urls')),
     
-    # Serve uploaded slips and community images in local development
+    # Serve uploaded slips, PDFs, and community images in local development
     re_path(r'^storage/slips/(?P<path>.*)$', serve_slip),
+    re_path(r'^storage/protected_pdfs/(?P<path>.*)$', serve_pdf),
     re_path(r'^storage/community/(?P<path>.*)$', serve, {
         'document_root': '/Users/tanchonl/Documents/ryu_new/backend/storage/community/',
     }),

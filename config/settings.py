@@ -148,6 +148,19 @@ if _is_directory_writable(_target_slips_dir):
 else:
     SLIPS_STORAGE_DIR = _local_slips_dir
 
+# Storage directory for protected PDFs with write permission fallback check
+_target_pdf_dir = os.getenv('PDF_STORAGE_DIR', '/mnt/hdd_backup/storage/php_app/uploads/protected_pdfs')
+_local_pdf_dir = str(BASE_DIR / 'storage' / 'protected_pdfs')
+
+if _is_directory_writable(_target_pdf_dir):
+    PDF_STORAGE_DIR = _target_pdf_dir
+else:
+    PDF_STORAGE_DIR = _local_pdf_dir
+
+MEDIA_ROOT = PDF_STORAGE_DIR
+MEDIA_URL = '/storage/protected_pdfs/'
+
+
 
 # CORS Config
 _cors_origins = os.getenv(

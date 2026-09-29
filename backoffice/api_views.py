@@ -19,6 +19,7 @@ from django.conf import settings
 from users.models import User
 from courses.models import Course, Module, Lesson, Enrollment
 from courses.services import AccessService
+from courses.utils import save_pdf_file
 from payments.models import Payment, SlipVerificationLog
 from payments.utils import approve_payment_transaction
 from support.models import SupportTicket
@@ -346,7 +347,8 @@ class AdminLessonDetailAPIView(APIView):
             is_free=is_free
         )
         if pdf_file:
-            lesson.pdf_file = pdf_file
+            filename, _ = save_pdf_file(pdf_file, lesson.id)
+            lesson.pdf_file = filename
             lesson.save()
 
         return Response({
@@ -375,7 +377,8 @@ class AdminLessonDetailAPIView(APIView):
         if 'is_free' in request.data:
             lesson.is_free = str(request.data.get('is_free')).lower() in ('true', '1', 'yes')
         if request.FILES.get('pdf_file'):
-            lesson.pdf_file = request.FILES.get('pdf_file')
+            filename, _ = save_pdf_file(request.FILES.get('pdf_file'), lesson.id)
+            lesson.pdf_file = filename
 
         lesson.save()
         return Response({'message': 'อัปเดตบทเรียนเรียบร้อยแล้ว', 'id': lesson.id})

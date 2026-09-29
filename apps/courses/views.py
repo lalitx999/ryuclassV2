@@ -3,6 +3,7 @@ import base64
 import re
 import requests
 from datetime import timedelta
+from urllib.parse import quote
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -157,7 +158,8 @@ class CourseDetailView(APIView):
                 pdf_url = None
                 if (has_access or lesson.is_free) and lesson.pdf_file:
                     try:
-                        pdf_url = request.build_absolute_uri(lesson.pdf_file.url)
+                        pdf_name = os.path.basename(str(lesson.pdf_file.name or lesson.pdf_file))
+                        pdf_url = f"/storage/protected_pdfs/{quote(pdf_name)}"
                     except Exception:
                         pdf_url = None
 
