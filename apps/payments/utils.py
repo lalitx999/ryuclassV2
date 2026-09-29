@@ -76,9 +76,14 @@ def verify_slip_easyslip(payment, target_path):
         headers = {
             'Authorization': f'Bearer {api_key}'
         }
+        import mimetypes
+        fname = os.path.basename(target_path)
+        mime_type, _ = mimetypes.guess_type(target_path)
+        mime_type = mime_type or 'image/jpeg'
+
         with open(target_path, 'rb') as f:
-            files = {'file': f}
-            response = requests.post(EASYSLIP_API_URL, headers=headers, files=files, timeout=15)
+            files = {'file': (fname, f, mime_type)}
+            response = requests.post(EASYSLIP_API_URL, headers=headers, files=files, timeout=30)
 
         raw_text = response.text
         try:
