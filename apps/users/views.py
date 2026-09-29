@@ -68,12 +68,14 @@ class LoginView(APIView):
             if not user.is_active:
                 return Response({'detail': 'บัญชีผู้ใช้นี้ถูกระงับการใช้งาน'}, status=status.HTTP_400_BAD_REQUEST)
 
-            pending_verification = EmailVerificationCode.objects.filter(user=user, verified_at__isnull=True).exists()
-            if pending_verification and not user.email_verified:
-                return Response({
-                    'detail': 'กรุณายืนยันอีเมลด้วยรหัส 6 หลักก่อนเข้าสู่ระบบ',
-                    'verification_required': True,
-                }, status=status.HTTP_403_FORBIDDEN)
+            is_admin_user = user.is_staff or user.is_superuser or getattr(user, 'role', '') == 'admin'
+            if not is_admin_user:
+                pending_verification = EmailVerificationCode.objects.filter(user=user, verified_at__isnull=True).exists()
+                if pending_verification and not user.email_verified:
+                    return Response({
+                        'detail': 'กรุณายืนยันอีเมลด้วยรหัส 6 หลักก่อนเข้าสู่ระบบ',
+                        'verification_required': True,
+                    }, status=status.HTTP_403_FORBIDDEN)
 
             refresh = RefreshToken.for_user(user)
             return Response({

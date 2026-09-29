@@ -57,10 +57,9 @@ urlpatterns = [
     path('api/games/leaderboard/', GameScoreView.as_view(), name='api_game_leaderboard'),
     path('api/games/submit-score/', GameScoreView.as_view(), name='api_game_submit_score'),
 
-    # ── Payment & Admin APIs ─────────────────────────────
+    # ── Payment & Admin REST APIs (DRF) ─────────────────
     path('api/payments/upload-slip/', UploadSlipView.as_view(), name='api_upload_slip'),
-    path('api/admin/payments/', AdminPaymentsView.as_view(), name='api_admin_payments'),
-    path('api/admin/broadcast-email/', BroadcastEmailView.as_view(), name='api_admin_broadcast_email'),
+    path('api/admin/', include('backoffice.api_urls')),
     path('api/admin/send-renewal-reminders/', SendRenewalRemindersView.as_view(), name='api_admin_send_renewal_reminders'),
 
     # ── RyuCommunity Forum APIs ──────────────────────────
