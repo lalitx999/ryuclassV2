@@ -21,5 +21,6 @@ urlpatterns = [
     path('lessons/', AdminLessonDetailAPIView.as_view(), name='api_admin_lesson_create'),
     path('lessons/<int:pk>/', AdminLessonDetailAPIView.as_view(), name='api_admin_lesson_detail'),
     path('users/', AdminUsersAPIView.as_view(), name='api_admin_users_list'),
+    path('users/<int:pk>/', AdminUsersAPIView.as_view(), name='api_admin_users_detail'),
     path('broadcast-email/', AdminBroadcastEmailAPIView.as_view(), name='api_admin_broadcast_email'),
 ]
