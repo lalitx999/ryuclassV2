@@ -43,27 +43,25 @@ class UploadSlipView(APIView):
 
         try:
             requested_days = int(duration)
-            amount = package_amount(course, 30 if renewal_requested else requested_days)
-        except (ValueError, TypeError) as exc:
-            return Response({'error': str(exc)}, status=400)
-        is_renewal = False
-        discount_percent = 0
+        except (ValueError, TypeError):
+            return Response({'error': 'ระยะเวลาเรียนไม่ถูกต้อง'}, status=400)
 
-        # The browser may request renewal, but the server decides eligibility.
+        # Check existing enrollment for renewal eligibility
         enrollment = Enrollment.objects.filter(
             user=user, course=course, is_active=True, is_lifetime_video=False,
         ).first()
-        today = timezone.now().date()
-        if renewal_requested and enrollment and enrollment.video_expires_at:
-            days_remaining = (enrollment.video_expires_at - today).days
-            if 0 <= days_remaining <= 3:
-                is_renewal = True
-                discount_percent = 10
-                requested_days = 33
-                amount = (Decimal(str(course.price)) * Decimal('0.90')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-
-        if renewal_requested and not is_renewal:
-            return Response({'error': 'ยังไม่เข้าเงื่อนไขส่วนลดต่ออายุ กรุณาเลือกแพ็กเกจปกติ'}, status=400)
+        
+        is_renewal = False
+        bonus_days = getattr(settings, 'RENEWAL_BONUS_DAYS', 3)
+        if renewal_requested or enrollment:
+            is_renewal = True
+            if requested_days == 30:
+                requested_days = 30 + bonus_days
+        
+        try:
+            amount = package_amount(course, 30 if requested_days == (30 + bonus_days) else requested_days)
+        except (ValueError, TypeError) as exc:
+            return Response({'error': str(exc)}, status=400)
         try:
             expected = Decimal(str(request.data.get('expected_amount', '')))
             if not expected.is_finite() or expected != amount:

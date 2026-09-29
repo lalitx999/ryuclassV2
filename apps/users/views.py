@@ -276,6 +276,7 @@ class ProfileView(APIView):
             
         from courses.services import AccessService
         lifetime_progress = AccessService.get_tier_progress(user.total_spent)
+        has_pending_payment = Payment.objects.filter(user=user, status='pending').exists()
 
         return Response({
             'id': user.id,
@@ -285,6 +286,7 @@ class ProfileView(APIView):
             'phone': user.phone,
             'total_spent': user.total_spent,
             'is_affiliate': user.is_affiliate,
+            'has_pending_payment': has_pending_payment,
             'courses_access': courses_access,
             'lifetime_progress': lifetime_progress
         }, status=status.HTTP_200_OK)

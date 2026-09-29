@@ -20,6 +20,7 @@ from users.models import User
 from courses.models import Course, Module, Lesson, Enrollment
 from courses.services import AccessService
 from payments.models import Payment, SlipVerificationLog
+from payments.utils import approve_payment_transaction
 from support.models import SupportTicket
 
 def is_staff_member(user):
@@ -249,36 +250,13 @@ class AdminPaymentReviewAPIView(APIView):
             return Response({'error': 'กรุณาระบุเหตุผลในการปฏิเสธสลิป'}, status=400)
 
         if action == 'approve':
-            user = User.objects.select_for_update().get(pk=payment.user_id)
-            user.total_spent += Decimal(str(payment.amount))
-            user.save(update_fields=['total_spent'])
-            AccessService.recalculate_lifetime_unlocks(user.pk)
-
-            enrollment, _ = Enrollment.objects.get_or_create(user=user, course=payment.course)
-            enrollment.is_active = True
-            enrollment.status = 'ACTIVE'
-            enrollment.payment_id = payment.pk
-            enrollment.activated_at = timezone.now()
-
-            if payment.duration_days == 9999:
-                enrollment.is_lifetime_video = True
-            else:
-                base_date = max(enrollment.video_expires_at or timezone.localdate(), timezone.localdate())
-                enrollment.video_expires_at = base_date + timedelta(days=payment.duration_days)
-                if payment.is_zoom_included:
-                    zoom_base = max(enrollment.zoom_expires_at or timezone.localdate(), timezone.localdate())
-                    enrollment.zoom_expires_at = zoom_base + timedelta(days=payment.duration_days)
-            enrollment.save()
-
-            payment.status = 'approved'
-            payment.rejection_reason = ''
+            approve_payment_transaction(payment, reviewed_by=request.user)
         else:
             payment.status = 'rejected'
             payment.rejection_reason = reason[:255]
-
-        payment.reviewed_by = request.user
-        payment.reviewed_at = timezone.now()
-        payment.save()
+            payment.reviewed_by = request.user
+            payment.reviewed_at = timezone.now()
+            payment.save()
 
         return Response({
             'message': 'บันทึกผลการตรวจสอบสลิปเรียบร้อยแล้ว',

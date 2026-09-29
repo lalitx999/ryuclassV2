@@ -8,10 +8,12 @@ from decimal import Decimal, InvalidOperation
 from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
+from django.db import transaction
 
 from .models import Payment, SlipVerificationLog
 from courses.models import Enrollment
 from courses.services import AccessService
+from users.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +51,55 @@ def save_slip_file(slip_file, user_id):
         logger.info(f"Successfully saved slip {filename} to fallback path: {target_path}")
         return filename, target_path
 
+@transaction.atomic
+def approve_payment_transaction(payment, reviewed_by=None, trans_ref=None):
+    """
+    Unified canonical approval function for all entry points:
+    1. Admin API Review (/api/admin/payments/<id>/review/)
+    2. Legacy Backoffice Admin View
+    3. EasySlip Auto Verification
+
+    Atomically:
+    - Increments user.total_spent by payment.amount
+    - Recalculates lifetime tier unlocks
+    - Grants/extends enrollment duration (video_expires_at & zoom_expires_at)
+    - Updates payment.status to 'approved'
+    """
+    if payment.status == 'approved':
+        return payment
+
+    user = payment.user
+    user.total_spent += payment.amount
+    user.save(update_fields=['total_spent'])
+    AccessService.recalculate_lifetime_unlocks(user.id)
+
+    enrollment, _ = Enrollment.objects.get_or_create(user=user, course=payment.course)
+    enrollment.is_active = True
+    enrollment.status = 'ACTIVE'
+    enrollment.payment_id = payment.id
+    enrollment.activated_at = timezone.now()
+
+    if payment.duration_days >= 999:
+        enrollment.is_lifetime_video = True
+    else:
+        base_date = max(enrollment.video_expires_at or timezone.localdate(), timezone.localdate())
+        enrollment.video_expires_at = base_date + timedelta(days=payment.duration_days)
+        if payment.is_zoom_included:
+            zoom_base = max(enrollment.zoom_expires_at or timezone.localdate(), timezone.localdate())
+            enrollment.zoom_expires_at = zoom_base + timedelta(days=payment.duration_days)
+    enrollment.save()
+
+    payment.status = 'approved'
+    payment.rejection_reason = ''
+    if trans_ref:
+        payment.trans_ref = trans_ref
+    payment.reviewed_at = timezone.now()
+    if reviewed_by:
+        payment.reviewed_by = reviewed_by
+    payment.save()
+
+    return payment
+
 def verify_slip_easyslip(payment, target_path):
     """
     Sends the uploaded slip image to EasySlip API (v1/verify).
@@ -56,7 +107,7 @@ def verify_slip_easyslip(payment, target_path):
     - Checks transferred amount vs payment.amount
     - Checks merchant account number (if configured)
     - Checks for duplicate slip (trans_ref)
-    - If valid: auto-approves payment, updates total_spent, recalculates lifetime unlocks, and grants course enrollment.
+    - If valid: auto-approves payment via approve_payment_transaction.
     - Creates SlipVerificationLog entry.
     Returns (success: bool, message: str, log_object: SlipVerificationLog).
     """
@@ -189,36 +240,11 @@ def verify_slip_easyslip(payment, target_path):
                 return False, err_msg, log
 
         # ── SUCCESS: Auto-Approve Payment & Grant Course Access ───
-        user = payment.user
-        user.total_spent += payment.amount
-        user.save(update_fields=['total_spent'])
-        AccessService.recalculate_lifetime_unlocks(user.id)
-
-        enrollment, _ = Enrollment.objects.get_or_create(user=user, course=payment.course)
-        enrollment.is_active = True
-        enrollment.status = 'ACTIVE'
-        enrollment.payment_id = payment.id
-        enrollment.activated_at = timezone.now()
-
-        if payment.duration_days >= 999:
-            enrollment.is_lifetime_video = True
-        else:
-            base_date = max(enrollment.video_expires_at or timezone.localdate(), timezone.localdate())
-            enrollment.video_expires_at = base_date + timedelta(days=payment.duration_days)
-            if payment.is_zoom_included:
-                zoom_base = max(enrollment.zoom_expires_at or timezone.localdate(), timezone.localdate())
-                enrollment.zoom_expires_at = zoom_base + timedelta(days=payment.duration_days)
-        enrollment.save()
-
-        payment.status = 'approved'
-        if trans_ref:
-            payment.trans_ref = trans_ref
-        payment.reviewed_at = timezone.now()
-        payment.save(update_fields=['status', 'trans_ref', 'reviewed_at'])
+        approve_payment_transaction(payment, trans_ref=trans_ref)
 
         log = SlipVerificationLog.objects.create(
             payment=payment,
-            user=user,
+            user=payment.user,
             status='approved',
             verified_amount=verified_amount,
             verified_bank=receiver_bank,
