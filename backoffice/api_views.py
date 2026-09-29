@@ -464,6 +464,73 @@ class AdminUsersAPIView(APIView):
             'results': results
         })
 
+    @transaction.atomic
+    def post(self, request):
+        if not is_staff_member(request.user):
+            return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
+
+        email = str(request.data.get('email', '')).strip().lower()
+        password = str(request.data.get('password', '')).strip()
+        name = str(request.data.get('name', '')).strip()
+        phone = str(request.data.get('phone', '')).strip()
+        total_spent = float(request.data.get('total_spent', 0))
+        course_id = request.data.get('course_id')
+        duration_days = request.data.get('duration_days', 365)
+
+        if not email:
+            return Response({'error': 'กรุณาระบุอีเมลผู้เรียน'}, status=400)
+
+        if User.objects.filter(email=email).exists():
+            return Response({'error': f'อีเมล {email} นี้มีอยู่ในระบบเรียบร้อยแล้ว'}, status=400)
+
+        if not password:
+            password = 'Ryu' + str(int(time.time()))[-6:]
+
+        user = User.objects.create_user(
+            email=email,
+            password=password,
+            name=name or email,
+            role='student'
+        )
+        if hasattr(user, 'phone') and phone:
+            user.phone = phone
+        user.total_spent = total_spent
+        user.save()
+
+        # Recalculate lifetime unlocks automatically based on initial total_spent
+        AccessService.recalculate_lifetime_unlocks(user.id)
+
+        # Grant course enrollment if specified
+        if course_id:
+            try:
+                course = Course.objects.get(id=course_id)
+                enrollment, _ = Enrollment.objects.get_or_create(
+                    user=user,
+                    course=course,
+                    defaults={'status': 'ACTIVE', 'is_active': True}
+                )
+                enrollment.status = 'ACTIVE'
+                enrollment.is_active = True
+                enrollment.activated_at = timezone.now()
+                days = int(duration_days)
+                if days >= 999:
+                    enrollment.is_lifetime_video = True
+                else:
+                    enrollment.video_expires_at = timezone.now().date() + timedelta(days=days)
+                enrollment.save()
+            except (Course.DoesNotExist, ValueError):
+                pass
+
+        return Response({
+            'message': 'เพิ่มนักเรียนใหม่เข้าระบบเรียบร้อยแล้ว',
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'name': user.name,
+                'password_used': password
+            }
+        }, status=status.HTTP_201_CREATED)
+
     def put(self, request, pk=None):
         if not is_staff_member(request.user):
             return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
