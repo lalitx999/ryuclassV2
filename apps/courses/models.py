@@ -4,9 +4,14 @@ from django.core.validators import MinValueValidator
 from decimal import Decimal
 
 class Course(models.Model):
+    LEVEL_CHOICES = [(level, level) for level in ('N5', 'N4', 'N3', 'N2', 'N1')]
+
     id = models.AutoField(primary_key=True) # Explicit ID mapping (1-5 for N5-N1)
     title = models.CharField(max_length=200)
     slug = models.CharField(max_length=220)
+    # This is deliberately not derived from the primary key.  Course IDs can
+    # change during imports, whereas entitlement tiers must remain stable.
+    level = models.CharField(max_length=2, choices=LEVEL_CHOICES, default='N5', db_index=True)
     description = models.TextField(blank=True, null=True)
     details = models.TextField(blank=True, null=True)
     price = models.DecimalField('ราคารายเดือน (30 วัน)', max_digits=10, decimal_places=2, default=0.00, validators=[MinValueValidator(Decimal('0.01'))])
@@ -164,4 +169,3 @@ class GameScore(models.Model):
     def __str__(self):
         name = self.user.email if self.user else self.player_name
         return f"Score {self.score} ({self.game_mode}/{self.jlpt_level}) by {name}"
-

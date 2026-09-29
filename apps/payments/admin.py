@@ -5,6 +5,7 @@ from datetime import timedelta
 from .models import Payment, SlipBlacklistPattern, SlipVerificationLog
 from courses.models import Enrollment
 from courses.services import AccessService
+from .utils import approve_payment_transaction
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
@@ -57,33 +58,7 @@ class PaymentAdmin(admin.ModelAdmin):
         count = 0
         for payment in queryset:
             if payment.status != 'approved':
-                payment.status = 'approved'
-                payment.reviewed_at = timezone.now()
-                payment.reviewed_by = request.user
-                payment.save()
-
-                # Calculate lifetime unlocks and totals
-                AccessService.add_payment(payment.user.id, payment.amount)
-
-                # Grant or update Enrollment
-                enrollment, created = Enrollment.objects.get_or_create(
-                    user=payment.user,
-                    course=payment.course,
-                    defaults={'is_active': True, 'status': 'ACTIVE'}
-                )
-                enrollment.is_active = True
-                enrollment.status = 'ACTIVE'
-                if payment.duration_days == 9999:
-                    enrollment.is_lifetime_video = True
-                else:
-                    if payment.is_renewal and enrollment.video_expires_at:
-                        enrollment.video_expires_at = max(enrollment.video_expires_at, timezone.now().date()) + timedelta(days=payment.duration_days)
-                    else:
-                        expiry = AccessService.calculate_expiry(payment.duration_days, payment.is_zoom_included)
-                        enrollment.video_expires_at = expiry['video']
-                        if expiry['zoom']:
-                            enrollment.zoom_expires_at = expiry['zoom']
-                enrollment.save()
+                approve_payment_transaction(payment, reviewed_by=request.user)
                 count += 1
         
         self.message_user(
@@ -117,14 +92,19 @@ class PaymentAdmin(admin.ModelAdmin):
             except Payment.DoesNotExist:
                 pass
         
+        needs_approval = obj.status == 'approved' and (not change or old_status != 'approved')
         if obj.status != 'pending' and (not change or old_status == 'pending'):
             obj.reviewed_at = timezone.now()
             obj.reviewed_by = request.user
 
+        # Save a pending row first so the canonical transaction owns the
+        # one-and-only transition to approved and cannot double-count points.
+        if needs_approval:
+            obj.status = 'pending'
         super().save_model(request, obj, form, change)
 
-        if obj.status == 'approved' and (not change or old_status != 'approved'):
-            AccessService.add_payment(obj.user.id, obj.amount)
+        if needs_approval:
+            approve_payment_transaction(obj, reviewed_by=request.user)
 
 
 @admin.register(SlipBlacklistPattern)

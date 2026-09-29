@@ -4,9 +4,9 @@ from .emails import send_course_renewal_reminder_email
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'price_display', 'is_active', 'sort_order')
+    list_display = ('id', 'title', 'level', 'price_display', 'is_active', 'sort_order')
     list_display_links = ('id', 'title')
-    list_filter = ('is_active',)
+    list_filter = ('level', 'is_active')
     search_fields = ('title', 'slug')
 
     def price_display(self, obj):
@@ -110,4 +110,3 @@ class GameScoreAdmin(admin.ModelAdmin):
     def changelist_view(self, request, extra_context=None):
         ensure_game_scores_table_exists()
         return super().changelist_view(request, extra_context=extra_context)
-

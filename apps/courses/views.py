@@ -72,11 +72,9 @@ class DashboardView(APIView):
         user = request.user if request.user and request.user.is_authenticated else None
         courses = Course.objects.filter(is_active=True).order_by('sort_order')
         
-        levels = {1: 'N5', 2: 'N4', 3: 'N3', 4: 'N2', 5: 'N1'}
         result = []
         for course in courses:
-            lvl = levels.get(course.id, 'N5')
-            has_access = AccessService.has_video_access(user.id, lvl) if user else False
+            has_access = AccessService.has_video_access(user.id, course.level) if user else False
             
             # Fetch enrollment info
             enrollment = Enrollment.objects.filter(user=user, course=course, is_active=True).first() if user else None
@@ -104,6 +102,7 @@ class DashboardView(APIView):
                 
             result.append({
                 'id': course.id,
+                'level': course.level,
                 'title': course.title,
                 'description': course.description,
                 'price': course.price,
@@ -131,8 +130,7 @@ class CourseDetailView(APIView):
         except Course.DoesNotExist:
             return Response({'error': 'ไม่พบคอร์สเรียน'}, status=status.HTTP_404_NOT_FOUND)
 
-        levels = {1: 'N5', 2: 'N4', 3: 'N3', 4: 'N2', 5: 'N1'}
-        has_access = AccessService.has_video_access(user.id, levels.get(course_id, 'N5')) if user else False
+        has_access = AccessService.has_video_access(user.id, course.level) if user else False
 
         # Fetch modules
         modules = Module.objects.filter(course=course, is_active=True).order_by('sort_order')
@@ -185,6 +183,7 @@ class CourseDetailView(APIView):
             
         return Response({
             'course_id': course.id,
+            'level': course.level,
             'course_title': course.title,
             'course_description': course.description or '',
             'price': str(course.price),

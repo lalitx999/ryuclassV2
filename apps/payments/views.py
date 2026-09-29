@@ -37,9 +37,8 @@ class UploadSlipView(APIView):
         except Course.DoesNotExist:
             return Response({'error': 'ไม่พบคอร์สเรียน'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Map levels and calculate amount
-        course_level_map = {1: 'N5', 2: 'N4', 3: 'N3', 4: 'N2', 5: 'N1'}
-        level = course_level_map.get(course.id, 'N5')
+        # Tier identity is stored on the course, never inferred from a mutable ID.
+        level = course.level
 
         try:
             requested_days = int(duration)
@@ -80,11 +79,12 @@ class UploadSlipView(APIView):
                 amount=amount,
                 duration_days=requested_days,
                 level_access=level,
-                is_zoom_included=(requested_days >= 180),
+                # Keep the established entitlement: every paid package includes Zoom.
+                is_zoom_included=(requested_days >= 30),
                 slip_path=filename,
                 status='pending',
                 is_renewal=is_renewal,
-                discount_percent=discount_percent,
+                discount_percent=0,
             )
 
             # EasySlip Verification & Auto Approval

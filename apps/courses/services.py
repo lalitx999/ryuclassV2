@@ -11,6 +11,7 @@ class AccessService:
         40000.00: 'N2',
         50000.00: 'N1',
     }
+    LEVEL_RANK = {'N5': 1, 'N4': 2, 'N3': 3, 'N2': 4, 'N1': 5}
 
     @staticmethod
     def get_tier_progress(total_spent: float) -> dict:
@@ -86,19 +87,14 @@ class AccessService:
         for e in enrollments:
             if e.status == 'BANNED':
                 return False
+            course_rank = AccessService.LEVEL_RANK.get(e.course.level, 0)
+            requested_rank = AccessService.LEVEL_RANK.get(level, 0)
             if e.is_lifetime_video:
-                # If it's a lifetime enrollment, verify it matches or covers the level.
-                # In RyuClass, N1 covers all, N2 covers N2-N5, etc.
-                # The course mapping: 1=N5, 2=N4, 3=N3, 4=N2, 5=N1.
-                # If level is 'N5' (ID 1) and enrollment is for course N3 (ID 3), they have access!
-                level_map = {'N5': 1, 'N4': 2, 'N3': 3, 'N2': 4, 'N1': 5}
-                requested_id = level_map.get(level, 1)
-                if e.course_id >= requested_id:
+                # A higher JLPT tier covers all lower tiers.
+                if course_rank >= requested_rank:
                     return True
             elif e.status == 'ACTIVE' and e.video_expires_at and e.video_expires_at >= today:
-                level_map = {'N5': 1, 'N4': 2, 'N3': 3, 'N2': 4, 'N1': 5}
-                requested_id = level_map.get(level, 1)
-                if e.course_id >= requested_id:
+                if course_rank >= requested_rank:
                     return True
         return False
 
@@ -135,20 +131,15 @@ class AccessService:
             if total >= threshold:
                 unlocked_levels.append(level)
 
-        # Map course levels to IDs
-        course_map = {'N5': 1, 'N4': 2, 'N3': 3, 'N2': 4, 'N1': 5}
-        
-        for lvl, course_id in course_map.items():
+        for lvl in AccessService.LEVEL_RANK:
             should_have_lifetime = lvl in unlocked_levels
             
-            # Fetch existing course model to verify it exists
-            try:
-                course = Course.objects.get(id=course_id)
-            except Course.DoesNotExist:
+            course = Course.objects.filter(level=lvl).order_by('id').first()
+            if course is None:
                 continue
 
             # Check if enrollment exists
-            enrollment = Enrollment.objects.filter(user_id=user_id, course_id=course_id).first()
+            enrollment = Enrollment.objects.filter(user_id=user_id, course=course).first()
 
             if should_have_lifetime:
                 # Find maximum ID to get next primary key if creating (in legacy tables without AUTO_INCREMENT, but wait:
