@@ -16,6 +16,7 @@ from django.utils import timezone
 from .models import EmailVerificationCode, User
 from .utils import notify_admin_new_order
 from payments.models import Payment
+from payments.utils import save_slip_file
 from courses.models import Course, Enrollment
 
 
@@ -145,17 +146,8 @@ class RegisterView(APIView):
             )
 
 
-            # 4. Save Slip File
-            ext = os.path.splitext(slip_file.name)[1] or '.jpg'
-            filename = f"slip_{user.id}_{int(time.time())}{ext}"
-            
-            storage_path = getattr(settings, 'SLIPS_STORAGE_DIR', '/mnt/hdd_backup/storage/php_app/uploads/slips')
-            os.makedirs(storage_path, exist_ok=True)
-            target_path = os.path.join(storage_path, filename)
-            
-            with open(target_path, 'wb+') as destination:
-                for chunk in slip_file.chunks():
-                    destination.write(chunk)
+            # 4. Save Slip File with fallback
+            filename, target_path = save_slip_file(slip_file, user.id)
 
             # 5. Create Payment
             payment = Payment.objects.create(

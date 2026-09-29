@@ -10,6 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from django.conf import settings
+from .utils import save_slip_file
 from .models import Payment
 from courses.models import Course, Enrollment
 from users.utils import notify_admin_new_order
@@ -71,17 +72,8 @@ class UploadSlipView(APIView):
             return Response({'error': 'กรุณาโหลดหน้าชำระเงินใหม่เพื่อยืนยันราคา'}, status=400)
 
         try:
-            # Save Slip File
-            ext = os.path.splitext(slip_file.name)[1] or '.jpg'
-            filename = f"slip_{user.id}_{int(time.time())}{ext}"
-            
-            storage_path = getattr(settings, 'SLIPS_STORAGE_DIR', '/mnt/hdd_backup/storage/php_app/uploads/slips')
-            os.makedirs(storage_path, exist_ok=True)
-            target_path = os.path.join(storage_path, filename)
-            
-            with open(target_path, 'wb+') as destination:
-                for chunk in slip_file.chunks():
-                    destination.write(chunk)
+            # Save Slip File with fallback
+            filename, target_path = save_slip_file(slip_file, user.id)
 
             # Create Payment
             payment = Payment.objects.create(

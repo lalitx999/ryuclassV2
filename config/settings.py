@@ -128,11 +128,25 @@ STATICFILES_DIRS = [
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
-# Storage directory for payment slips
-_default_slips_dir = '/mnt/hdd_backup/storage/php_app/uploads/slips'
-if not os.path.exists('/mnt/hdd_backup'):
-    _default_slips_dir = str(BASE_DIR / 'storage' / 'slips')
-SLIPS_STORAGE_DIR = os.getenv('SLIPS_STORAGE_DIR', _default_slips_dir)
+# Storage directory for payment slips with write permission fallback check
+_target_slips_dir = os.getenv('SLIPS_STORAGE_DIR', '/mnt/hdd_backup/storage/php_app/uploads/slips')
+_local_slips_dir = str(BASE_DIR / 'storage' / 'slips')
+
+def _is_directory_writable(dir_path):
+    try:
+        os.makedirs(dir_path, exist_ok=True)
+        test_file = os.path.join(dir_path, '.write_test')
+        with open(test_file, 'w') as f:
+            f.write('1')
+        os.remove(test_file)
+        return True
+    except OSError:
+        return False
+
+if _is_directory_writable(_target_slips_dir):
+    SLIPS_STORAGE_DIR = _target_slips_dir
+else:
+    SLIPS_STORAGE_DIR = _local_slips_dir
 
 
 # CORS Config

@@ -14,14 +14,27 @@ from quizzes.views import QuizDetailView, SubmitQuizView
 from payments.views import UploadSlipView
 
 from django.conf import settings
+from django.http import Http404
+import os
+
+def serve_slip(request, path):
+    primary_dir = getattr(settings, 'SLIPS_STORAGE_DIR', str(settings.BASE_DIR / 'storage' / 'slips'))
+    primary_file = os.path.join(primary_dir, path)
+    if os.path.exists(primary_file):
+        return serve(request, path, document_root=primary_dir)
+    
+    fallback_dir = str(settings.BASE_DIR / 'storage' / 'slips')
+    fallback_file = os.path.join(fallback_dir, path)
+    if os.path.exists(fallback_file):
+        return serve(request, path, document_root=fallback_dir)
+        
+    raise Http404("Slip file not found")
 
 urlpatterns = [
     path('admin/', include('backoffice.urls')),
     
     # Serve uploaded slips and community images in local development
-    re_path(r'^storage/slips/(?P<path>.*)$', serve, {
-        'document_root': settings.SLIPS_STORAGE_DIR,
-    }),
+    re_path(r'^storage/slips/(?P<path>.*)$', serve_slip),
     re_path(r'^storage/community/(?P<path>.*)$', serve, {
         'document_root': '/Users/tanchonl/Documents/ryu_new/backend/storage/community/',
     }),
