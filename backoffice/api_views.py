@@ -417,9 +417,49 @@ class AdminModuleDetailAPIView(APIView):
 class AdminUsersAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def get(self, request, pk=None):
         if not is_staff_member(request.user):
             return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Single user detail request
+        if pk or request.GET.get('id'):
+            user_id = pk or request.GET.get('id')
+            try:
+                u = User.objects.get(pk=user_id)
+            except User.DoesNotExist:
+                return Response({'error': 'ไม่พบรายชื่อผู้เรียนนี้'}, status=404)
+
+            tier_info = AccessService.get_tier_progress(u.total_spent)
+            courses = Course.objects.all().order_by('id')
+            all_course_access = []
+            for c in courses:
+                enr = Enrollment.objects.filter(user=u, course=c).first()
+                all_course_access.append({
+                    'course_id': c.id,
+                    'course_title': c.title,
+                    'level': c.level,
+                    'is_enrolled': bool(enr and enr.is_active),
+                    'status': enr.status if enr else 'INACTIVE',
+                    'is_lifetime': enr.is_lifetime_video if enr else False,
+                    'expires_at': enr.video_expires_at.strftime('%Y-%m-%d') if (enr and enr.video_expires_at) else None,
+                })
+
+            return Response({
+                'id': u.id,
+                'name': u.name or u.email,
+                'email': u.email,
+                'nickname': u.nickname or '',
+                'phone': u.phone or '',
+                'telegram_chat_id': u.telegram_chat_id or '',
+                'total_spent': float(u.total_spent),
+                'points': getattr(u, 'points', 0),
+                'custom_renewal_price': float(u.custom_renewal_price) if getattr(u, 'custom_renewal_price', None) is not None else None,
+                'admin_remark': u.admin_remark or '',
+                'tier_level': tier_info.get('current_level', 'เริ่มต้น'),
+                'is_active': u.is_active,
+                'created_at': u.date_joined.strftime('%d/%m/%Y') if hasattr(u, 'date_joined') and u.date_joined else '-',
+                'all_course_access': all_course_access
+            })
 
         q = request.GET.get('q', '').strip()
         page_num = int(request.GET.get('page', 1))
@@ -427,7 +467,7 @@ class AdminUsersAPIView(APIView):
 
         queryset = User.objects.filter(role='student').order_by('-id')
         if q:
-            queryset = queryset.filter(Q(email__icontains=q) | Q(name__icontains=q) | Q(phone__icontains=q))
+            queryset = queryset.filter(Q(email__icontains=q) | Q(name__icontains=q) | Q(phone__icontains=q) | Q(nickname__icontains=q))
 
         total_count = queryset.count()
         start_idx = (page_num - 1) * page_size
@@ -442,8 +482,10 @@ class AdminUsersAPIView(APIView):
                 {
                     'course_id': e.course.id,
                     'course_title': e.course.title,
+                    'level': e.course.level,
                     'status': e.status,
-                    'expires_at': e.video_expires_at.strftime('%d/%m/%Y') if e.video_expires_at else 'Lifetime'
+                    'is_lifetime': e.is_lifetime_video,
+                    'expires_at': 'Lifetime' if e.is_lifetime_video else (e.video_expires_at.strftime('%d/%m/%Y') if e.video_expires_at else 'Lifetime')
                 } for e in enrollments_qs
             ]
 
@@ -451,8 +493,13 @@ class AdminUsersAPIView(APIView):
                 'id': u.id,
                 'name': u.name or u.email,
                 'email': u.email,
+                'nickname': u.nickname or '',
                 'phone': getattr(u, 'phone', '') or '-',
+                'telegram_chat_id': u.telegram_chat_id or '',
                 'total_spent': float(u.total_spent),
+                'points': getattr(u, 'points', 0),
+                'custom_renewal_price': float(u.custom_renewal_price) if getattr(u, 'custom_renewal_price', None) is not None else None,
+                'admin_remark': u.admin_remark or '',
                 'tier_level': tier_info.get('current_level', 'เริ่มต้น'),
                 'is_active': u.is_active,
                 'created_at': u.date_joined.strftime('%d/%m/%Y') if hasattr(u, 'date_joined') and u.date_joined else '-',
@@ -474,11 +521,29 @@ class AdminUsersAPIView(APIView):
         email = str(request.data.get('email', '')).strip().lower()
         password = str(request.data.get('password', '')).strip()
         name = str(request.data.get('name', '')).strip()
+        nickname = str(request.data.get('nickname', '')).strip()
         phone = str(request.data.get('phone', '')).strip()
+        telegram_chat_id = str(request.data.get('telegram_chat_id', '')).strip()
+        admin_remark = str(request.data.get('admin_remark', '')).strip()
+
         try:
             total_spent = Decimal(str(request.data.get('total_spent', 0)))
         except Exception:
             total_spent = Decimal('0.00')
+
+        try:
+            points = int(request.data.get('points', 0))
+        except Exception:
+            points = 0
+
+        custom_price_raw = request.data.get('custom_renewal_price')
+        custom_renewal_price = None
+        if custom_price_raw is not None and str(custom_price_raw).strip() != '':
+            try:
+                custom_renewal_price = Decimal(str(custom_price_raw))
+            except Exception:
+                pass
+
         course_id = request.data.get('course_id')
         duration_days = request.data.get('duration_days', 30)
         expires_at_str = request.data.get('expires_at')
@@ -500,7 +565,15 @@ class AdminUsersAPIView(APIView):
         )
         if hasattr(user, 'phone') and phone:
             user.phone = phone
+        if hasattr(user, 'nickname') and nickname:
+            user.nickname = nickname
+        if hasattr(user, 'telegram_chat_id') and telegram_chat_id:
+            user.telegram_chat_id = telegram_chat_id
+
         user.total_spent = total_spent
+        user.points = points
+        user.custom_renewal_price = custom_renewal_price
+        user.admin_remark = admin_remark
         user.save()
 
         # Recalculate lifetime unlocks automatically based on initial total_spent
@@ -546,6 +619,7 @@ class AdminUsersAPIView(APIView):
             }
         }, status=status.HTTP_201_CREATED)
 
+    @transaction.atomic
     def put(self, request, pk=None):
         if not is_staff_member(request.user):
             return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
@@ -560,8 +634,38 @@ class AdminUsersAPIView(APIView):
 
         if 'name' in request.data:
             u.name = request.data.get('name')
+        if 'email' in request.data and request.data.get('email'):
+            new_email = str(request.data.get('email')).strip().lower()
+            if new_email != u.email and not User.objects.filter(email=new_email).exclude(pk=u.id).exists():
+                u.email = new_email
+        if 'nickname' in request.data:
+            u.nickname = request.data.get('nickname')
         if 'phone' in request.data and hasattr(u, 'phone'):
             u.phone = request.data.get('phone')
+        if 'telegram_chat_id' in request.data and hasattr(u, 'telegram_chat_id'):
+            u.telegram_chat_id = request.data.get('telegram_chat_id')
+        if 'admin_remark' in request.data:
+            u.admin_remark = request.data.get('admin_remark')
+
+        if 'password' in request.data and request.data.get('password'):
+            u.set_password(str(request.data.get('password')).strip())
+
+        if 'points' in request.data:
+            try:
+                u.points = int(request.data.get('points', 0))
+            except Exception:
+                pass
+
+        if 'custom_renewal_price' in request.data:
+            cpr = request.data.get('custom_renewal_price')
+            if cpr is None or str(cpr).strip() == '':
+                u.custom_renewal_price = None
+            else:
+                try:
+                    u.custom_renewal_price = Decimal(str(cpr))
+                except Exception:
+                    pass
+
         if 'total_spent' in request.data:
             try:
                 u.total_spent = Decimal(str(request.data.get('total_spent')))
@@ -573,12 +677,47 @@ class AdminUsersAPIView(APIView):
         # Recalculate lifetime unlocks automatically if total_spent changed
         AccessService.recalculate_lifetime_unlocks(u.id)
 
-        # Handle manual course enrollment if specified
+        # Handle detailed per-course enrollment updates if provided
+        course_entitlements = request.data.get('course_entitlements')
+        if isinstance(course_entitlements, list):
+            import datetime as dt_module
+            for item in course_entitlements:
+                cid = item.get('course_id')
+                if not cid:
+                    continue
+                try:
+                    course = Course.objects.get(id=cid)
+                    is_active = item.get('is_active', True)
+                    is_lifetime = item.get('is_lifetime', False)
+                    expires_str = item.get('expires_at')
+
+                    enrollment, _ = Enrollment.objects.get_or_create(
+                        user=u,
+                        course=course,
+                        defaults={'status': 'ACTIVE', 'is_active': True}
+                    )
+                    enrollment.is_active = bool(is_active)
+                    enrollment.status = 'ACTIVE' if is_active else 'EXPIRED'
+                    enrollment.is_lifetime_video = bool(is_lifetime)
+
+                    if expires_str and not is_lifetime:
+                        try:
+                            enrollment.video_expires_at = dt_module.date.fromisoformat(str(expires_str))
+                        except Exception:
+                            pass
+                    elif is_lifetime:
+                        enrollment.video_expires_at = None
+
+                    enrollment.save()
+                except Course.DoesNotExist:
+                    pass
+
+        # Handle single course enrollment shorthand if specified
         course_id = request.data.get('course_id')
         duration_days = request.data.get('duration_days')
         expires_at_str = request.data.get('expires_at')
 
-        if course_id:
+        if course_id and not course_entitlements:
             try:
                 course = Course.objects.get(id=course_id)
                 enrollment, created = Enrollment.objects.get_or_create(
@@ -606,7 +745,7 @@ class AdminUsersAPIView(APIView):
             except (Course.DoesNotExist, ValueError):
                 pass
 
-        return Response({'message': 'อัปเดตข้อมูลผู้เรียนและสิทธิ์การเรียนเรียบร้อยแล้ว'})
+        return Response({'message': 'อัปเดตข้อมูลและตั้งค่านักเรียนเรียบร้อยแล้ว'})
 
     def delete(self, request, pk=None):
         if not is_staff_member(request.user):
@@ -619,6 +758,112 @@ class AdminUsersAPIView(APIView):
             return Response({'message': 'ปิดใช้งานบัญชีผู้เรียนเรียบร้อยแล้ว'})
         except User.DoesNotExist:
             return Response({'error': 'ไม่พบรายชื่อผู้เรียนนี้'}, status=404)
+
+
+class AdminUserImportAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        if not is_staff_member(request.user):
+            return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
+
+        students_data = request.data.get('students', [])
+        if not isinstance(students_data, list) or len(students_data) == 0:
+            return Response({'error': 'กรุณาระบุรายการนักเรียนในรูปแบบ array (students)'}, status=400)
+
+        imported_count = 0
+        updated_count = 0
+        errors = []
+
+        import datetime as dt_module
+
+        for idx, row in enumerate(students_data):
+            email = str(row.get('email', '')).strip().lower()
+            if not email:
+                errors.append(f"แถวที่ {idx+1}: ไม่พบอีเมลผู้เรียน")
+                continue
+
+            name = str(row.get('name', email)).strip()
+            phone = str(row.get('phone', '')).strip()
+            nickname = str(row.get('nickname', '')).strip()
+            password = str(row.get('password', '')).strip()
+            admin_remark = str(row.get('admin_remark', 'Imported from legacy system')).strip()
+
+            try:
+                total_spent = Decimal(str(row.get('total_spent', 0)))
+            except Exception:
+                total_spent = Decimal('0.00')
+
+            try:
+                points = int(row.get('points', 0))
+            except Exception:
+                points = 0
+
+            custom_price_raw = row.get('custom_renewal_price')
+            custom_renewal_price = None
+            if custom_price_raw is not None and str(custom_price_raw).strip() != '':
+                try:
+                    custom_renewal_price = Decimal(str(custom_price_raw))
+                except Exception:
+                    pass
+
+            user = User.objects.filter(email=email).first()
+            if user:
+                user.name = name or user.name
+                if phone:
+                    user.phone = phone
+                if nickname:
+                    user.nickname = nickname
+                user.total_spent = total_spent
+                user.points = points
+                user.custom_renewal_price = custom_renewal_price
+                user.admin_remark = admin_remark
+                user.save()
+                updated_count += 1
+            else:
+                pwd_used = password or ('Ryu' + str(int(time.time()))[-6:])
+                user = User.objects.create_user(
+                    email=email,
+                    password=pwd_used,
+                    name=name,
+                    role='student'
+                )
+                user.phone = phone
+                user.nickname = nickname
+                user.total_spent = total_spent
+                user.points = points
+                user.custom_renewal_price = custom_renewal_price
+                user.admin_remark = admin_remark
+                user.save()
+                imported_count += 1
+
+            # Lifetime levels unlock automatically based on total_spent
+            AccessService.recalculate_lifetime_unlocks(user.id)
+
+            # Manual lifetime levels or active course enrollments override
+            lifetime_levels = row.get('lifetime_levels') # e.g. "N5,N4" or ["N5", "N4"]
+            if isinstance(lifetime_levels, str):
+                lifetime_levels = [l.strip().upper() for l in lifetime_levels.split(',') if l.strip()]
+
+            if isinstance(lifetime_levels, list):
+                for lvl in lifetime_levels:
+                    try:
+                        course = Course.objects.get(level=lvl.upper(), is_active=True)
+                        enr, _ = Enrollment.objects.get_or_create(user=user, course=course)
+                        enr.is_active = True
+                        enr.status = 'ACTIVE'
+                        enr.is_lifetime_video = True
+                        enr.save()
+                    except Course.DoesNotExist:
+                        pass
+
+        return Response({
+            'message': f'นำเข้าเรียบร้อย: เพิ่มใหม่ {imported_count} รายการ, อัปเดต {updated_count} รายการ',
+            'imported_count': imported_count,
+            'updated_count': updated_count,
+            'errors': errors
+        })
 
 
 class AdminBroadcastEmailAPIView(APIView):
