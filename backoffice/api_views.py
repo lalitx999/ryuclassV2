@@ -639,20 +639,15 @@ class AdminUsersAPIView(APIView):
             email=email,
             password=password,
             name=name or email,
-            role='student'
+            role='student',
+            phone=phone,
+            nickname=nickname,
+            telegram_chat_id=telegram_chat_id,
+            total_spent=total_spent,
+            points=points,
+            custom_renewal_price=custom_renewal_price,
+            admin_remark=admin_remark
         )
-        if hasattr(user, 'phone') and phone:
-            user.phone = phone
-        if hasattr(user, 'nickname') and nickname:
-            user.nickname = nickname
-        if hasattr(user, 'telegram_chat_id') and telegram_chat_id:
-            user.telegram_chat_id = telegram_chat_id
-
-        user.total_spent = total_spent
-        user.points = points
-        user.custom_renewal_price = custom_renewal_price
-        user.admin_remark = admin_remark
-        user.save()
 
         # Recalculate lifetime unlocks automatically based on initial total_spent
         AccessService.recalculate_lifetime_unlocks(user.id)
@@ -906,15 +901,14 @@ class AdminUserImportAPIView(APIView):
                         email=email,
                         password=pwd_used,
                         name=name,
-                        role='student'
+                        role='student',
+                        phone=phone,
+                        nickname=nickname,
+                        total_spent=total_spent,
+                        points=points,
+                        custom_renewal_price=custom_renewal_price,
+                        admin_remark=admin_remark
                     )
-                    user.phone = phone
-                    user.nickname = nickname
-                    user.total_spent = total_spent
-                    user.points = points
-                    user.custom_renewal_price = custom_renewal_price
-                    user.admin_remark = admin_remark
-                    user.save()
                     imported_count += 1
 
                 # Lifetime levels unlock automatically based on total_spent

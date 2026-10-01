@@ -8,6 +8,8 @@ class UserManager(BaseUserManager):
             raise ValueError('The Email field must be set')
         email = self.normalize_email(email)
         extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault('points', 0)
+        extra_fields.setdefault('custom_renewal_price', None)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
