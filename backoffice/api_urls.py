@@ -7,6 +7,7 @@ from .api_views import (
     AdminPaymentReviewAPIView,
     AdminCoursesAPIView,
     AdminLessonDetailAPIView,
+    AdminModuleDetailAPIView,
     AdminUsersAPIView,
     AdminBroadcastEmailAPIView
 )
@@ -18,6 +19,7 @@ urlpatterns = [
     path('payments/<int:pk>/', AdminPaymentDetailAPIView.as_view(), name='api_admin_payment_detail'),
     path('payments/<int:pk>/review/', AdminPaymentReviewAPIView.as_view(), name='api_admin_payment_review'),
     path('courses/', AdminCoursesAPIView.as_view(), name='api_admin_courses_list'),
+    path('modules/<int:pk>/', AdminModuleDetailAPIView.as_view(), name='api_admin_module_detail'),
     path('lessons/', AdminLessonDetailAPIView.as_view(), name='api_admin_lesson_create'),
     path('lessons/<int:pk>/', AdminLessonDetailAPIView.as_view(), name='api_admin_lesson_detail'),
     path('users/', AdminUsersAPIView.as_view(), name='api_admin_users_list'),

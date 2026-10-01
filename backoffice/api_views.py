@@ -376,7 +376,10 @@ class AdminLessonDetailAPIView(APIView):
             lesson.pdf_title = request.data.get('pdf_title')
         if 'is_free' in request.data:
             lesson.is_free = str(request.data.get('is_free')).lower() in ('true', '1', 'yes')
-        if request.FILES.get('pdf_file'):
+        if str(request.data.get('remove_pdf', '')).lower() in ('true', '1', 'yes'):
+            lesson.pdf_file = ''
+            lesson.pdf_title = ''
+        elif request.FILES.get('pdf_file'):
             filename, _ = save_pdf_file(request.FILES.get('pdf_file'), lesson.id)
             lesson.pdf_file = filename
 
@@ -392,6 +395,24 @@ class AdminLessonDetailAPIView(APIView):
             return Response({'message': 'ลบบทเรียนเรียบร้อยแล้ว'})
         except Lesson.DoesNotExist:
             return Response({'error': 'ไม่พบบทเรียนนี้'}, status=404)
+
+class AdminModuleDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, pk):
+        if not is_staff_member(request.user):
+            return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            module = Module.objects.get(pk=pk)
+        except Module.DoesNotExist:
+            return Response({'error': 'ไม่พบหมวดนี้'}, status=404)
+
+        title = request.data.get('title')
+        if title:
+            module.title = str(title).strip()
+            module.save()
+
+        return Response({'message': 'อัปเดตชื่อหมวดเรียบร้อยแล้ว', 'id': module.id, 'title': module.title})
 
 class AdminUsersAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -454,9 +475,13 @@ class AdminUsersAPIView(APIView):
         password = str(request.data.get('password', '')).strip()
         name = str(request.data.get('name', '')).strip()
         phone = str(request.data.get('phone', '')).strip()
-        total_spent = float(request.data.get('total_spent', 0))
+        try:
+            total_spent = Decimal(str(request.data.get('total_spent', 0)))
+        except Exception:
+            total_spent = Decimal('0.00')
         course_id = request.data.get('course_id')
-        duration_days = request.data.get('duration_days', 365)
+        duration_days = request.data.get('duration_days', 30)
+        expires_at_str = request.data.get('expires_at')
 
         if not email:
             return Response({'error': 'กรุณาระบุอีเมลผู้เรียน'}, status=400)
@@ -493,11 +518,20 @@ class AdminUsersAPIView(APIView):
                 enrollment.status = 'ACTIVE'
                 enrollment.is_active = True
                 enrollment.activated_at = timezone.now()
-                days = int(duration_days)
-                if days >= 999:
-                    enrollment.is_lifetime_video = True
-                else:
-                    enrollment.video_expires_at = timezone.now().date() + timedelta(days=days)
+                if expires_at_str:
+                    try:
+                        import datetime as dt_module
+                        enrollment.video_expires_at = dt_module.date.fromisoformat(str(expires_at_str))
+                        enrollment.is_lifetime_video = False
+                    except Exception:
+                        pass
+                elif duration_days:
+                    days = int(duration_days)
+                    if days >= 999:
+                        enrollment.is_lifetime_video = True
+                    else:
+                        enrollment.video_expires_at = timezone.localdate() + timedelta(days=days)
+                        enrollment.is_lifetime_video = False
                 enrollment.save()
             except (Course.DoesNotExist, ValueError):
                 pass
@@ -530,8 +564,8 @@ class AdminUsersAPIView(APIView):
             u.phone = request.data.get('phone')
         if 'total_spent' in request.data:
             try:
-                u.total_spent = float(request.data.get('total_spent'))
-            except (ValueError, TypeError):
+                u.total_spent = Decimal(str(request.data.get('total_spent')))
+            except (ValueError, TypeError, Exception):
                 pass
 
         u.save()
@@ -542,6 +576,8 @@ class AdminUsersAPIView(APIView):
         # Handle manual course enrollment if specified
         course_id = request.data.get('course_id')
         duration_days = request.data.get('duration_days')
+        expires_at_str = request.data.get('expires_at')
+
         if course_id:
             try:
                 course = Course.objects.get(id=course_id)
@@ -552,12 +588,20 @@ class AdminUsersAPIView(APIView):
                 )
                 enrollment.status = 'ACTIVE'
                 enrollment.is_active = True
-                if duration_days:
+                if expires_at_str:
+                    try:
+                        import datetime as dt_module
+                        enrollment.video_expires_at = dt_module.date.fromisoformat(str(expires_at_str))
+                        enrollment.is_lifetime_video = False
+                    except Exception:
+                        pass
+                elif duration_days is not None:
                     days = int(duration_days)
                     if days >= 999:
                         enrollment.is_lifetime_video = True
                     else:
-                        enrollment.video_expires_at = datetime.date.today() + datetime.timedelta(days=days)
+                        enrollment.video_expires_at = timezone.localdate() + timedelta(days=days)
+                        enrollment.is_lifetime_video = False
                 enrollment.save()
             except (Course.DoesNotExist, ValueError):
                 pass

@@ -69,7 +69,9 @@ def approve_payment_transaction(payment, reviewed_by=None, trans_ref=None):
         return payment
 
     user = payment.user
-    user.total_spent += payment.amount
+    current_spent = Decimal(str(user.total_spent or '0'))
+    payment_amt = Decimal(str(payment.amount or '0'))
+    user.total_spent = current_spent + payment_amt
     user.save(update_fields=['total_spent'])
     AccessService.recalculate_lifetime_unlocks(user.id)
 

@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 from django.db import transaction
 from users.models import User
 from courses.models import Course, Enrollment
@@ -175,9 +176,11 @@ class AccessService:
         except User.DoesNotExist:
             return
             
-        # 1. Update total_spent
-        user.total_spent = float(user.total_spent) + float(amount)
-        user.save()
+        # 1. Update total_spent using Decimal
+        current_spent = Decimal(str(user.total_spent or '0'))
+        add_amt = Decimal(str(amount or '0'))
+        user.total_spent = current_spent + add_amt
+        user.save(update_fields=['total_spent'])
 
         # 2. Recalculate lifetime tiers
         AccessService.recalculate_lifetime_unlocks(user_id)
