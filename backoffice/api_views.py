@@ -303,6 +303,7 @@ class AdminCoursesAPIView(APIView):
                 'id': c.id,
                 'title': c.title,
                 'description': c.description or '',
+                'level': c.level,
                 'price': float(c.price),
                 'price_180': float(c.price_180) if c.price_180 else None,
                 'price_365': float(c.price_365) if c.price_365 else None,
@@ -313,6 +314,62 @@ class AdminCoursesAPIView(APIView):
                 'modules': modules_list
             })
         return Response(results)
+
+    def post(self, request):
+        if not is_staff_member(request.user):
+            return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
+        title = request.data.get('title', '').strip()
+        level = request.data.get('level', 'N5')
+        description = request.data.get('description', '')
+        price = request.data.get('price', 0)
+        price_180 = request.data.get('price_180')
+        price_365 = request.data.get('price_365')
+        price_lifetime = request.data.get('price_lifetime')
+
+        if not title:
+            return Response({'error': 'กรุณาระบุชื่อคอร์สเรียน'}, status=400)
+
+        slug = title.lower().replace(' ', '-') + '-' + str(int(time.time()))
+        course = Course.objects.create(
+            title=title,
+            slug=slug,
+            level=level,
+            description=description,
+            price=Decimal(str(price or 0)),
+            price_180=Decimal(str(price_180)) if price_180 else None,
+            price_365=Decimal(str(price_365)) if price_365 else None,
+            price_lifetime=Decimal(str(price_lifetime)) if price_lifetime else None,
+            is_active=True
+        )
+        return Response({'message': 'สร้างคอร์สเรียนใหม่เรียบร้อยแล้ว', 'id': course.id, 'title': course.title}, status=status.HTTP_201_CREATED)
+
+    def put(self, request, pk):
+        if not is_staff_member(request.user):
+            return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            course = Course.objects.get(pk=pk)
+        except Course.DoesNotExist:
+            return Response({'error': 'ไม่พบคอร์สนี้'}, status=404)
+
+        if 'title' in request.data:
+            course.title = request.data.get('title')
+        if 'description' in request.data:
+            course.description = request.data.get('description')
+        if 'level' in request.data:
+            course.level = request.data.get('level')
+        if 'price' in request.data:
+            course.price = Decimal(str(request.data.get('price') or 0))
+        if 'price_180' in request.data:
+            p = request.data.get('price_180')
+            course.price_180 = Decimal(str(p)) if p else None
+        if 'price_365' in request.data:
+            p = request.data.get('price_365')
+            course.price_365 = Decimal(str(p)) if p else None
+        if 'price_lifetime' in request.data:
+            p = request.data.get('price_lifetime')
+            course.price_lifetime = Decimal(str(p)) if p else None
+        course.save()
+        return Response({'message': 'อัปเดตข้อมูลคอร์สเรียนเรียบร้อยแล้ว', 'id': course.id})
 
 class AdminLessonDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -398,6 +455,27 @@ class AdminLessonDetailAPIView(APIView):
 
 class AdminModuleDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not is_staff_member(request.user):
+            return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
+        course_id = request.data.get('course_id')
+        title = request.data.get('title', '').strip()
+        if not course_id or not title:
+            return Response({'error': 'กรุณาระบุ course_id และ title'}, status=400)
+        try:
+            course = Course.objects.get(pk=course_id)
+        except Course.DoesNotExist:
+            return Response({'error': 'ไม่พบคอร์สเรียนนี้'}, status=404)
+
+        last_sort = Module.objects.filter(course=course).count()
+        module = Module.objects.create(
+            course=course,
+            title=title,
+            sort_order=last_sort + 1,
+            is_active=True
+        )
+        return Response({'message': 'สร้างหมวดใหญ่เรียบร้อยแล้ว', 'id': module.id, 'title': module.title}, status=status.HTTP_201_CREATED)
 
     def put(self, request, pk):
         if not is_staff_member(request.user):
@@ -779,84 +857,87 @@ class AdminUserImportAPIView(APIView):
         import datetime as dt_module
 
         for idx, row in enumerate(students_data):
-            email = str(row.get('email', '')).strip().lower()
-            if not email:
-                errors.append(f"แถวที่ {idx+1}: ไม่พบอีเมลผู้เรียน")
-                continue
-
-            name = str(row.get('name', email)).strip()
-            phone = str(row.get('phone', '')).strip()
-            nickname = str(row.get('nickname', '')).strip()
-            password = str(row.get('password', '')).strip()
-            admin_remark = str(row.get('admin_remark', 'Imported from legacy system')).strip()
-
             try:
-                total_spent = Decimal(str(row.get('total_spent', 0)))
-            except Exception:
-                total_spent = Decimal('0.00')
+                email = str(row.get('email', '')).strip().lower()
+                if not email:
+                    errors.append(f"แถวที่ {idx+1}: ไม่พบอีเมลผู้เรียน")
+                    continue
 
-            try:
-                points = int(row.get('points', 0))
-            except Exception:
-                points = 0
+                name = str(row.get('name', email)).strip()
+                phone = str(row.get('phone', '')).strip()
+                nickname = str(row.get('nickname', '')).strip()
+                password = str(row.get('password', '')).strip()
+                admin_remark = str(row.get('admin_remark', 'Imported from legacy system')).strip()
 
-            custom_price_raw = row.get('custom_renewal_price')
-            custom_renewal_price = None
-            if custom_price_raw is not None and str(custom_price_raw).strip() != '':
                 try:
-                    custom_renewal_price = Decimal(str(custom_price_raw))
+                    total_spent = Decimal(str(row.get('total_spent', 0)))
                 except Exception:
-                    pass
+                    total_spent = Decimal('0.00')
 
-            user = User.objects.filter(email=email).first()
-            if user:
-                user.name = name or user.name
-                if phone:
-                    user.phone = phone
-                if nickname:
-                    user.nickname = nickname
-                user.total_spent = total_spent
-                user.points = points
-                user.custom_renewal_price = custom_renewal_price
-                user.admin_remark = admin_remark
-                user.save()
-                updated_count += 1
-            else:
-                pwd_used = password or ('Ryu' + str(int(time.time()))[-6:])
-                user = User.objects.create_user(
-                    email=email,
-                    password=pwd_used,
-                    name=name,
-                    role='student'
-                )
-                user.phone = phone
-                user.nickname = nickname
-                user.total_spent = total_spent
-                user.points = points
-                user.custom_renewal_price = custom_renewal_price
-                user.admin_remark = admin_remark
-                user.save()
-                imported_count += 1
+                try:
+                    points = int(row.get('points', 0))
+                except Exception:
+                    points = 0
 
-            # Lifetime levels unlock automatically based on total_spent
-            AccessService.recalculate_lifetime_unlocks(user.id)
-
-            # Manual lifetime levels or active course enrollments override
-            lifetime_levels = row.get('lifetime_levels') # e.g. "N5,N4" or ["N5", "N4"]
-            if isinstance(lifetime_levels, str):
-                lifetime_levels = [l.strip().upper() for l in lifetime_levels.split(',') if l.strip()]
-
-            if isinstance(lifetime_levels, list):
-                for lvl in lifetime_levels:
+                custom_price_raw = row.get('custom_renewal_price')
+                custom_renewal_price = None
+                if custom_price_raw is not None and str(custom_price_raw).strip() != '':
                     try:
-                        course = Course.objects.get(level=lvl.upper(), is_active=True)
-                        enr, _ = Enrollment.objects.get_or_create(user=user, course=course)
-                        enr.is_active = True
-                        enr.status = 'ACTIVE'
-                        enr.is_lifetime_video = True
-                        enr.save()
-                    except Course.DoesNotExist:
+                        custom_renewal_price = Decimal(str(custom_price_raw))
+                    except Exception:
                         pass
+
+                user = User.objects.filter(email=email).first()
+                if user:
+                    user.name = name or user.name
+                    if phone:
+                        user.phone = phone
+                    if nickname:
+                        user.nickname = nickname
+                    user.total_spent = total_spent
+                    user.points = points
+                    user.custom_renewal_price = custom_renewal_price
+                    user.admin_remark = admin_remark
+                    user.save()
+                    updated_count += 1
+                else:
+                    pwd_used = password or ('Ryu' + str(int(time.time()))[-6:])
+                    user = User.objects.create_user(
+                        email=email,
+                        password=pwd_used,
+                        name=name,
+                        role='student'
+                    )
+                    user.phone = phone
+                    user.nickname = nickname
+                    user.total_spent = total_spent
+                    user.points = points
+                    user.custom_renewal_price = custom_renewal_price
+                    user.admin_remark = admin_remark
+                    user.save()
+                    imported_count += 1
+
+                # Lifetime levels unlock automatically based on total_spent
+                AccessService.recalculate_lifetime_unlocks(user.id)
+
+                # Manual lifetime levels or active course enrollments override
+                lifetime_levels = row.get('lifetime_levels') # e.g. "N5,N4" or ["N5", "N4"]
+                if isinstance(lifetime_levels, str):
+                    lifetime_levels = [l.strip().upper() for l in lifetime_levels.split(',') if l.strip()]
+
+                if isinstance(lifetime_levels, list):
+                    for lvl in lifetime_levels:
+                        courses_qs = Course.objects.filter(level=lvl.upper(), is_active=True)
+                        for course in courses_qs:
+                            enr, _ = Enrollment.objects.get_or_create(user=user, course=course)
+                            enr.is_active = True
+                            enr.status = 'ACTIVE'
+                            enr.is_lifetime_video = True
+                            enr.save()
+            except Exception as row_err:
+                import traceback
+                traceback.print_exc()
+                errors.append(f"แถวที่ {idx+1} ({row.get('email', 'N/A')}): {str(row_err)}")
 
         return Response({
             'message': f'นำเข้าเรียบร้อย: เพิ่มใหม่ {imported_count} รายการ, อัปเดต {updated_count} รายการ',
