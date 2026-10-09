@@ -22,9 +22,12 @@ from .pricing import package_prices
 def decrypt_video_url(encrypted_value: str) -> str:
     if not encrypted_value:
         return ""
+    clean_val = str(encrypted_value).strip()
+    if clean_val.startswith(('http://', 'https://', '//', 'www.', 'youtube.com', 'youtu.be')):
+        return clean_val
     try:
         # Double base64 decode to match PHP's default base64 openssl output double base64-encoded
-        first_decode = base64.b64decode(encrypted_value)
+        first_decode = base64.b64decode(clean_val)
         raw_cipher = base64.b64decode(first_decode)
         
         # PHP openssl pads keys with null bytes to valid size (32 bytes for AES-256)
@@ -39,9 +42,12 @@ def decrypt_video_url(encrypted_value: str) -> str:
         padding_len = decrypted_data[-1]
         if 1 <= padding_len <= 16:
             decrypted_data = decrypted_data[:-padding_len]
-        return decrypted_data.decode('utf-8', errors='ignore')
+        res = decrypted_data.decode('utf-8', errors='ignore')
+        if res.startswith(('http://', 'https://', '//', 'www.', 'youtube.com', 'youtu.be')):
+            return res
+        return res or clean_val
     except Exception:
-        return ""
+        return clean_val
 
 def to_embed_url(url: str) -> str:
     if not url:

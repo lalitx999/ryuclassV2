@@ -102,3 +102,33 @@ def notify_admin_new_order(
     caption = "\n".join(lines)
     
     return send_telegram_photo(slip_file_path, caption)
+
+def send_welcome_student_email(user):
+    """Send welcome and instructions email to student upon registration or renewal."""
+    from django.core.mail import send_mail
+    from django.conf import settings
+
+    subject = "ขอบคุณที่สมัครเรียนกับพี่ริวครับ"
+    message = (
+        "ขอบคุณที่สมัครเรียนกับพี่ริวครับ\n\n"
+        "ขั้นตอนการเรียนคลิปย้อนหลัง\n\n"
+        "1 ไปที่ Google พิมพ์ค้าหาว่า Ryuclass\n\n"
+        "2.ทำการเข้าสู่ระบบ กรณีมือถือ ให้กดสามขีดด้านบน\n\n"
+        "3.เข้าเรียนคลิปตาม Step ได้เลยครับ\n\n"
+        "คุณได้รับคำเชิญให้เข้าร่วมกลุ่ม LINE \"นักเรียนพี่ริว\" โปรดแตะลิงก์ด้านล่างเพื่อเข้าร่วมโอเพนแชทนี้\n"
+        "https://line.me/ti/g2/ZJVKFgNw1ciVAzbsh5hbzezyEZ3O4bXJ-sZlWQ?utm_source=invitation&utm_medium=link_copy&utm_campaign=default\n\n"
+        "รหัสผ่าน 12123\n\n"
+        "ยินดีต้อนรับคร๊าบ"
+    )
+    try:
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or 'support@chatbotth.me'
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=from_email,
+            recipient_list=[user.email],
+            fail_silently=True
+        )
+    except Exception:
+        pass
+

@@ -440,6 +440,12 @@ class AdminLessonDetailAPIView(APIView):
             filename, _ = save_pdf_file(request.FILES.get('pdf_file'), lesson.id)
             lesson.pdf_file = filename
 
+        if 'sort_order' in request.data:
+            try:
+                lesson.sort_order = int(request.data.get('sort_order'))
+            except (ValueError, TypeError):
+                pass
+
         lesson.save()
         return Response({'message': 'อัปเดตบทเรียนเรียบร้อยแล้ว', 'id': lesson.id})
 
@@ -461,6 +467,7 @@ class AdminModuleDetailAPIView(APIView):
             return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
         course_id = request.data.get('course_id')
         title = request.data.get('title', '').strip()
+        sort_order = request.data.get('sort_order')
         if not course_id or not title:
             return Response({'error': 'กรุณาระบุ course_id และ title'}, status=400)
         try:
@@ -469,10 +476,11 @@ class AdminModuleDetailAPIView(APIView):
             return Response({'error': 'ไม่พบคอร์สเรียนนี้'}, status=404)
 
         last_sort = Module.objects.filter(course=course).count()
+        so = int(sort_order) if sort_order is not None else (last_sort + 1)
         module = Module.objects.create(
             course=course,
             title=title,
-            sort_order=last_sort + 1,
+            sort_order=so,
             is_active=True
         )
         return Response({'message': 'สร้างหมวดใหญ่เรียบร้อยแล้ว', 'id': module.id, 'title': module.title}, status=status.HTTP_201_CREATED)
@@ -488,7 +496,12 @@ class AdminModuleDetailAPIView(APIView):
         title = request.data.get('title')
         if title:
             module.title = str(title).strip()
-            module.save()
+        if 'sort_order' in request.data:
+            try:
+                module.sort_order = int(request.data.get('sort_order'))
+            except (ValueError, TypeError):
+                pass
+        module.save()
 
         return Response({'message': 'อัปเดตชื่อหมวดเรียบร้อยแล้ว', 'id': module.id, 'title': module.title})
 

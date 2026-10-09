@@ -100,6 +100,12 @@ def approve_payment_transaction(payment, reviewed_by=None, trans_ref=None):
         payment.reviewed_by = reviewed_by
     payment.save()
 
+    try:
+        from users.utils import send_welcome_student_email
+        send_welcome_student_email(user)
+    except Exception:
+        pass
+
     return payment
 
 def verify_slip_easyslip(payment, target_path):

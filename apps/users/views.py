@@ -230,7 +230,8 @@ class VerifyEmailView(APIView):
         challenge.verified_at = now
         challenge.save(update_fields=['attempts', 'verified_at'])
         user.email_verified = True
-        user.save(update_fields=['email_verified'])
+        from .utils import notify_admin_new_order, send_welcome_student_email
+        send_welcome_student_email(user)
 
         refresh = RefreshToken.for_user(user)
         return Response({
