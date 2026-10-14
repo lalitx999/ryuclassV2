@@ -2,6 +2,43 @@
 {% block content %}
 <div class="row">
   <div class="col-md-10 offset-md-1 col-lg-8 offset-lg-2">
+
+    {% if latest_broadcast %}
+      {% if latest_broadcast.status == 'running' %}
+        <div class="alert alert-info shadow-sm mb-4">
+          <h5><i class="fas fa-spinner fa-spin mr-2"></i>กำลังส่งอีเมลบรอดแคสต์ในเบื้องหลัง...</h5>
+          <p class="mb-0">
+            หัวข้อ: <strong>{{ latest_broadcast.subject }}</strong> | เป้าหมาย: <strong>{{ latest_broadcast.total }}</strong> บัญชี<br>
+            <small class="text-white-50"><i class="fas fa-clock mr-1"></i>เริ่มส่งเมื่อ: {{ latest_broadcast.started_at }} (ระบบกำลังทำงานในพื้นหลัง กดรีเฟรชหน้าเพื่อดูผลล่าสุด)</small>
+          </p>
+        </div>
+      {% elif latest_broadcast.status == 'completed' %}
+        <div class="alert alert-success shadow-sm mb-4">
+          <h5><i class="fas fa-check-circle mr-2"></i>ผลการส่งบรอดแคสต์ล่าสุด: ส่งสำเร็จ</h5>
+          <p class="mb-0">
+            หัวข้อ: <strong>{{ latest_broadcast.subject }}</strong><br>
+            ส่งผ่าน: <strong>{{ latest_broadcast.sent }} / {{ latest_broadcast.total }}</strong> บัญชี
+            {% if latest_broadcast.failed > 0 %}<span class="badge badge-warning ml-2">ไม่ผ่าน {{ latest_broadcast.failed }} บัญชี</span>{% endif %}<br>
+            <small class="text-white-50"><i class="fas fa-clock mr-1"></i>เสร็จสิ้นเมื่อ: {{ latest_broadcast.finished_at }}</small>
+          </p>
+        </div>
+      {% elif latest_broadcast.status == 'failed' %}
+        <div class="alert alert-danger shadow-sm mb-4">
+          <h5><i class="fas fa-exclamation-triangle mr-2"></i>ผลการส่งบรอดแคสต์ล่าสุด: ล้มเหลว (ส่งไม่ผ่าน)</h5>
+          <p class="mb-1">
+            หัวข้อ: <strong>{{ latest_broadcast.subject }}</strong> | เป้าหมาย: <strong>{{ latest_broadcast.total }}</strong> บัญชี<br>
+            <small class="text-white-50"><i class="fas fa-clock mr-1"></i>เวลาที่พบปัญหา: {{ latest_broadcast.finished_at }}</small>
+          </p>
+          <div class="p-2 bg-dark rounded text-monospace small text-white mt-2">
+            สาเหตุ: {{ latest_broadcast.error }}
+          </div>
+          <small class="d-block mt-2 font-weight-bold">
+            💡 คำแนะนำ: ตรวจสอบการตั้งค่า <code>EMAIL_HOST_USER</code> และ <code>EMAIL_HOST_PASSWORD</code> ในไฟล์ <code>.env</code> บนเซิร์ฟเวอร์
+          </small>
+        </div>
+      {% endif %}
+    {% endif %}
+
     <div class="card card-primary">
       <div class="card-header">
         <h3 class="card-title"><i class="fas fa-paper-plane mr-2"></i>สร้างอีเมลบรอดแคสต์ (Broadcast Email Composer)</h3>

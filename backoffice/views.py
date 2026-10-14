@@ -322,11 +322,32 @@ def export_csv(request, app, name):
     return response
 
 
+import json
+from pathlib import Path
+
+BROADCAST_STATUS_FILE = Path('/tmp/ryuclass_broadcast_status.json')
+
+def get_broadcast_status():
+    if BROADCAST_STATUS_FILE.exists():
+        try:
+            return json.loads(BROADCAST_STATUS_FILE.read_text(encoding='utf-8'))
+        except Exception:
+            return None
+    return None
+
+def set_broadcast_status(data):
+    try:
+        BROADCAST_STATUS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+    except Exception:
+        pass
+
+
 @staff
 def broadcast_email_composer(request):
     from courses.models import Course, Enrollment
-    from django.core.mail import EmailMultiAlternatives
+    from django.core.mail import EmailMultiAlternatives, get_connection
     from users.models import User
+    import threading
 
     courses = Course.objects.filter(is_active=True).order_by('sort_order')
     
@@ -355,39 +376,115 @@ def broadcast_email_composer(request):
             if not email_list:
                 messages.warning(request, 'ไม่พบอีเมลผู้เรียนในกลุ่มที่เลือก')
             else:
-                from django.core.mail import get_connection
-                import threading
-
                 from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or 'support@chatbotth.me'
+                now_str = timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M:%S')
 
-                def send_bulk_task(emails, subj, text_body, sender):
+                initial_status = {
+                    'status': 'running',
+                    'subject': subject,
+                    'total': len(email_list),
+                    'sent': 0,
+                    'failed': 0,
+                    'started_at': now_str,
+                    'finished_at': None,
+                    'error': None
+                }
+                set_broadcast_status(initial_status)
+
+                def send_bulk_task(emails, subj, text_body, sender, start_time):
+                    print(f"\n[Broadcast Email] ========================================", flush=True)
+                    print(f"[Broadcast Email] Started at {start_time}", flush=True)
+                    print(f"[Broadcast Email] Recipients ({len(emails)}): {emails[:5]}...", flush=True)
+                    print(f"[Broadcast Email] Subject: {subj}", flush=True)
+                    print(f"[Broadcast Email] Sender: {sender}", flush=True)
+                    print(f"[Broadcast Email] SMTP: {settings.EMAIL_HOST}:{settings.EMAIL_PORT} (SSL={settings.EMAIL_USE_SSL}, TLS={settings.EMAIL_USE_TLS})", flush=True)
+                    print(f"[Broadcast Email] Auth User: {settings.EMAIL_HOST_USER}", flush=True)
+
+                    sent_count = 0
+                    failed_count = 0
+                    error_msg = None
+
                     try:
-                        conn = get_connection(fail_silently=True)
+                        conn = get_connection(fail_silently=False)
                         conn.open()
-                        batch = []
-                        for addr in emails:
-                            m = EmailMultiAlternatives(
-                                subject=subj,
-                                body=text_body,
-                                from_email=sender,
-                                to=[addr],
-                                connection=conn
-                            )
-                            m.attach_alternative(text_body.replace('\n', '<br>'), "text/html")
-                            batch.append(m)
-                        if batch:
-                            conn.send_messages(batch)
-                        conn.close()
-                    except Exception:
-                        pass
+                        print(f"[Broadcast Email] Connected and authenticated to SMTP server successfully!", flush=True)
 
-                threading.Thread(target=send_bulk_task, args=(email_list, subject, body, from_email), daemon=True).start()
+                        for idx, addr in enumerate(emails, 1):
+                            try:
+                                m = EmailMultiAlternatives(
+                                    subject=subj,
+                                    body=text_body,
+                                    from_email=sender,
+                                    to=[addr],
+                                    connection=conn
+                                )
+                                m.attach_alternative(text_body.replace('\n', '<br>'), "text/html")
+                                conn.send_messages([m])
+                                sent_count += 1
+                                print(f"[Broadcast Email] ({idx}/{len(emails)}) {addr} -> SENT OK", flush=True)
+                            except Exception as item_err:
+                                failed_count += 1
+                                print(f"[Broadcast Email] ({idx}/{len(emails)}) {addr} -> FAILED: {item_err}", flush=True)
+
+                        conn.close()
+                        print(f"[Broadcast Email] COMPLETED: Sent {sent_count}/{len(emails)} successfully (Failed: {failed_count})", flush=True)
+                        print(f"[Broadcast Email] ========================================\n", flush=True)
+
+                    except Exception as e:
+                        import traceback
+                        traceback.print_exc()
+                        error_msg = f"{type(e).__name__}: {e}"
+                        print(f"[Broadcast Email ERROR] {error_msg}", flush=True)
+                        print(f"[Broadcast Email] ========================================\n", flush=True)
+
+                    finish_str = timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M:%S')
+                    result_status = {
+                        'status': 'failed' if error_msg else 'completed',
+                        'subject': subj,
+                        'total': len(emails),
+                        'sent': sent_count,
+                        'failed': failed_count if not error_msg else len(emails),
+                        'started_at': start_time,
+                        'finished_at': finish_str,
+                        'error': error_msg
+                    }
+                    set_broadcast_status(result_status)
+
+                    try:
+                        from users.utils import send_telegram_message
+                        if error_msg:
+                            tg_text = (
+                                f"❌ <b>[Broadcast Email ล้มเหลว]</b>\n"
+                                f"📌 <b>หัวข้อ:</b> {subj}\n"
+                                f"👥 <b>เป้าหมาย:</b> {len(emails)} คน\n"
+                                f"⚠️ <b>สาเหตุ:</b> <code>{error_msg}</code>\n"
+                                f"🕒 <b>เวลา:</b> {finish_str}\n"
+                                f"⚙️ <b>SMTP:</b> {settings.EMAIL_HOST}:{settings.EMAIL_PORT} ({settings.EMAIL_HOST_USER})"
+                            )
+                        else:
+                            tg_text = (
+                                f"✅ <b>[Broadcast Email สำเร็จ]</b>\n"
+                                f"📌 <b>หัวข้อ:</b> {subj}\n"
+                                f"👥 <b>ส่งผ่าน:</b> {sent_count} / {len(emails)} บัญชี"
+                                + (f"\n⚠️ <b>ส่งไม่ผ่าน:</b> {failed_count} บัญชี" if failed_count > 0 else "")
+                                + f"\n🕒 <b>เวลา:</b> {finish_str}"
+                            )
+                        send_telegram_message(tg_text)
+                    except Exception as tg_err:
+                        print(f"[Broadcast Email] Telegram notification failed: {tg_err}", flush=True)
+
+                threading.Thread(
+                    target=send_bulk_task,
+                    args=(email_list, subject, body, from_email, now_str),
+                    daemon=True
+                ).start()
 
                 audit(request, request.user, CHANGE, f'ส่งอีเมลบรอดแคสต์ถึง {len(email_list)} คน: {subject}')
                 messages.success(request, f'ระบบเริ่มส่งอีเมลบรอดแคสต์ไปยัง {len(email_list)} บัญชีในเบื้องหลังเรียบร้อยแล้ว!')
                 return redirect('backoffice:broadcast-email')
                 
-    return page(request, 'broadcast_email.html', title='บรอดแคสต์อีเมล (Broadcast Email)', courses=courses)
+    status_info = get_broadcast_status()
+    return page(request, 'broadcast_email.html', title='บรอดแคสต์อีเมล (Broadcast Email)', courses=courses, latest_broadcast=status_info)
 
 
 @staff
