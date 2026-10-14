@@ -404,29 +404,66 @@ def broadcast_email_composer(request):
                     failed_count = 0
                     error_msg = None
 
+                    import time
+
                     try:
                         conn = get_connection(fail_silently=False)
                         conn.open()
                         print(f"[Broadcast Email] Connected and authenticated to SMTP server successfully!", flush=True)
 
                         for idx, addr in enumerate(emails, 1):
+                            m = EmailMultiAlternatives(
+                                subject=subj,
+                                body=text_body,
+                                from_email=sender,
+                                to=[addr],
+                                connection=conn
+                            )
+                            m.attach_alternative(text_body.replace('\n', '<br>'), "text/html")
+
+                            # Try sending
                             try:
-                                m = EmailMultiAlternatives(
-                                    subject=subj,
-                                    body=text_body,
-                                    from_email=sender,
-                                    to=[addr],
-                                    connection=conn
-                                )
-                                m.attach_alternative(text_body.replace('\n', '<br>'), "text/html")
                                 conn.send_messages([m])
                                 sent_count += 1
                                 print(f"[Broadcast Email] ({idx}/{len(emails)}) {addr} -> SENT OK", flush=True)
-                            except Exception as item_err:
-                                failed_count += 1
-                                print(f"[Broadcast Email] ({idx}/{len(emails)}) {addr} -> FAILED: {item_err}", flush=True)
+                            except Exception as first_err:
+                                print(f"[Broadcast Email] ({idx}/{len(emails)}) {addr} connection dropped ({first_err}), reconnecting...", flush=True)
+                                # Auto-reconnect & retry once
+                                try:
+                                    time.sleep(1.5)
+                                    try:
+                                        conn.close()
+                                    except Exception:
+                                        pass
+                                    conn.open()
+                                    m.connection = conn
+                                    conn.send_messages([m])
+                                    sent_count += 1
+                                    print(f"[Broadcast Email] ({idx}/{len(emails)}) {addr} -> RETRY SUCCESS", flush=True)
+                                except Exception as retry_err:
+                                    failed_count += 1
+                                    print(f"[Broadcast Email] ({idx}/{len(emails)}) {addr} -> FAILED: {retry_err}", flush=True)
 
-                        conn.close()
+                            # Pacing to avoid Hostinger anti-spam rate limits
+                            time.sleep(0.5)
+
+                            # Update status file periodically (every 5 emails or at the end)
+                            if idx % 5 == 0 or idx == len(emails):
+                                set_broadcast_status({
+                                    'status': 'running',
+                                    'subject': subj,
+                                    'total': len(emails),
+                                    'sent': sent_count,
+                                    'failed': failed_count,
+                                    'started_at': start_time,
+                                    'finished_at': None,
+                                    'error': None
+                                })
+
+                        try:
+                            conn.close()
+                        except Exception:
+                            pass
                         print(f"[Broadcast Email] COMPLETED: Sent {sent_count}/{len(emails)} successfully (Failed: {failed_count})", flush=True)
                         print(f"[Broadcast Email] ========================================\n", flush=True)
 
