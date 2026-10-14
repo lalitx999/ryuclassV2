@@ -355,23 +355,36 @@ def broadcast_email_composer(request):
             if not email_list:
                 messages.warning(request, 'ไม่พบอีเมลผู้เรียนในกลุ่มที่เลือก')
             else:
-                sent_success = 0
-                for email_addr in email_list:
+                from django.core.mail import get_connection
+                import threading
+
+                from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or 'support@chatbotth.me'
+
+                def send_bulk_task(emails, subj, text_body, sender):
                     try:
-                        msg = EmailMultiAlternatives(
-                            subject=subject,
-                            body=body,
-                            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'support@chatbotth.me'),
-                            to=[email_addr]
-                        )
-                        msg.attach_alternative(body.replace('\n', '<br>'), "text/html")
-                        msg.send(fail_silently=True)
-                        sent_success += 1
+                        conn = get_connection(fail_silently=True)
+                        conn.open()
+                        batch = []
+                        for addr in emails:
+                            m = EmailMultiAlternatives(
+                                subject=subj,
+                                body=text_body,
+                                from_email=sender,
+                                to=[addr],
+                                connection=conn
+                            )
+                            m.attach_alternative(text_body.replace('\n', '<br>'), "text/html")
+                            batch.append(m)
+                        if batch:
+                            conn.send_messages(batch)
+                        conn.close()
                     except Exception:
                         pass
-                        
-                audit(request, request.user, CHANGE, f'ส่งอีเมลบรอดแคสต์ถึง {sent_success} คน: {subject}')
-                messages.success(request, f'ส่งอีเมลสำเร็จ {sent_success} / {len(email_list)} บัญชีเรียบร้อยแล้ว!')
+
+                threading.Thread(target=send_bulk_task, args=(email_list, subject, body, from_email), daemon=True).start()
+
+                audit(request, request.user, CHANGE, f'ส่งอีเมลบรอดแคสต์ถึง {len(email_list)} คน: {subject}')
+                messages.success(request, f'ระบบเริ่มส่งอีเมลบรอดแคสต์ไปยัง {len(email_list)} บัญชีในเบื้องหลังเรียบร้อยแล้ว!')
                 return redirect('backoffice:broadcast-email')
                 
     return page(request, 'broadcast_email.html', title='บรอดแคสต์อีเมล (Broadcast Email)', courses=courses)
