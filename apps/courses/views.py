@@ -12,7 +12,11 @@ from django.utils import timezone
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
-from .models import Course, Module, Lesson, Enrollment, Progress, Note, GameScore, ensure_notes_table_exists, ensure_game_scores_table_exists
+from .models import (
+    Course, Module, Lesson, Enrollment, Progress, Note, GameScore,
+    ensure_notes_table_exists, ensure_game_scores_table_exists,
+    StudyActivityLog, ensure_study_activity_table_exists
+)
 from .services import AccessService
 from config.ai import get_provider_config
 from support.models import AraigoguSession, AraigoguMessage
@@ -251,10 +255,127 @@ class SaveProgressView(APIView):
                     progress.completed_at = timezone.now()
             progress.save()
 
+        # Record into daily study activity log for study streak & calendar
+        try:
+            ensure_study_activity_table_exists()
+            today = timezone.localdate()
+            study_log, _ = StudyActivityLog.objects.get_or_create(user=user, date=today)
+            mins = max(1, int(float(video_time) / 60)) if video_time else 5
+            if study_log.minutes_spent < mins:
+                study_log.minutes_spent = mins
+            if is_completed:
+                study_log.lessons_completed = Progress.objects.filter(
+                    user=user,
+                    is_completed=True,
+                    completed_at__date=today
+                ).count() or (study_log.lessons_completed + 1)
+            study_log.save()
+        except Exception:
+            pass
+
         return Response({
             'message': 'บันทึกความคืบหน้าสำเร็จ',
             'video_time': progress.video_time,
             'is_completed': progress.is_completed
+        })
+
+class StudyCalendarView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        ensure_study_activity_table_exists()
+        
+        today = timezone.localdate()
+        try:
+            year = int(request.GET.get('year', today.year))
+            month = int(request.GET.get('month', today.month))
+        except (ValueError, TypeError):
+            year = today.year
+            month = today.month
+
+        # Query all study logs for this user to compute accurate streak
+        all_logs = StudyActivityLog.objects.filter(user=user).order_by('date')
+        all_dates_set = set(all_logs.values_list('date', flat=True))
+        
+        # Fallback from Progress table if any
+        progress_dates = Progress.objects.filter(
+            user=user, 
+            is_completed=True, 
+            completed_at__isnull=False
+        ).values_list('completed_at__date', flat=True)
+        for d in progress_dates:
+            if d:
+                all_dates_set.add(d)
+
+        # Calculate current streak
+        current_streak = 0
+        check_date = today
+        is_studied_today = today in all_dates_set
+
+        # If today is not studied yet, check yesterday to preserve ongoing streak
+        if not is_studied_today:
+            check_date = today - timedelta(days=1)
+
+        while check_date in all_dates_set:
+            current_streak += 1
+            check_date -= timedelta(days=1)
+
+        # Calculate longest streak
+        sorted_dates = sorted(list(all_dates_set))
+        longest_streak = 0
+        temp_streak = 0
+        prev_date = None
+        for d in sorted_dates:
+            if prev_date is None or d == prev_date + timedelta(days=1):
+                temp_streak += 1
+            elif d > prev_date + timedelta(days=1):
+                temp_streak = 1
+            prev_date = d
+            if temp_streak > longest_streak:
+                longest_streak = temp_streak
+
+        # Activity dates for the requested month
+        month_logs = StudyActivityLog.objects.filter(user=user, date__year=year, date__month=month)
+        activity_dates = {}
+        total_minutes_this_month = 0
+        for log in month_logs:
+            d_str = log.date.strftime('%Y-%m-%d')
+            activity_dates[d_str] = {
+                'minutes': log.minutes_spent,
+                'lessons': log.lessons_completed
+            }
+            total_minutes_this_month += log.minutes_spent
+
+        # Also merge Progress fallback for this month
+        month_progress = Progress.objects.filter(
+            user=user, 
+            is_completed=True, 
+            completed_at__year=year, 
+            completed_at__month=month
+        )
+        for p in month_progress:
+            if p.completed_at:
+                d_str = p.completed_at.strftime('%Y-%m-%d')
+                if d_str not in activity_dates:
+                    mins = max(10, int(p.video_time / 60)) if p.video_time else 15
+                    activity_dates[d_str] = {
+                        'minutes': mins,
+                        'lessons': 1
+                    }
+                    total_minutes_this_month += mins
+
+        total_study_days = len(activity_dates)
+
+        return Response({
+            'year': year,
+            'month': month,
+            'current_streak': current_streak,
+            'longest_streak': max(longest_streak, current_streak),
+            'total_study_days': total_study_days,
+            'total_minutes_this_month': total_minutes_this_month,
+            'is_studied_today': is_studied_today,
+            'activity_dates': activity_dates
         })
 
 class ChatBotView(APIView):

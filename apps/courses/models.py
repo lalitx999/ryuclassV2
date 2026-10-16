@@ -169,3 +169,39 @@ class GameScore(models.Model):
     def __str__(self):
         name = self.user.email if self.user else self.player_name
         return f"Score {self.score} ({self.game_mode}/{self.jlpt_level}) by {name}"
+
+def ensure_study_activity_table_exists():
+    from django.db import connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS study_activity_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    date DATE NOT NULL,
+                    minutes_spent INT NOT NULL DEFAULT 0,
+                    lessons_completed INT NOT NULL DEFAULT 0,
+                    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+                    UNIQUE KEY user_date_unique (user_id, date)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+    except Exception:
+        pass
+
+class StudyActivityLog(models.Model):
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='study_activity_logs', db_column='user_id')
+    date = models.DateField(db_index=True)
+    minutes_spent = models.PositiveIntegerField(default=0)
+    lessons_completed = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'study_activity_logs'
+        unique_together = ('user', 'date')
+
+    def __str__(self):
+        return f"{self.user.email} - {self.date} ({self.minutes_spent}m, {self.lessons_completed} lessons)"
+

@@ -8,7 +8,7 @@ from courses.views import (
     DashboardView, CourseDetailView, FreeTrialLessonsView, SaveProgressView, 
     ChatBotView, NoteView, GameScoreView, ResetPasswordView, AdminPaymentsView,
     AraigoguChatView, AraigoguHistoryView, AraigoguSessionDetailView,
-    SendRenewalRemindersView
+    SendRenewalRemindersView, StudyCalendarView
 )
 from quizzes.views import QuizDetailView, SubmitQuizView
 from payments.views import UploadSlipView
@@ -69,6 +69,7 @@ urlpatterns = [
     path('api/courses/save-progress/', SaveProgressView.as_view(), name='api_save_progress'),
     path('api/courses/notes/<int:lesson_id>/', NoteView.as_view(), name='api_get_note'),
     path('api/courses/notes/save/', NoteView.as_view(), name='api_save_note'),
+    path('api/courses/study-calendar/', StudyCalendarView.as_view(), name='api_study_calendar'),
     path('api/courses/chatbot/', ChatBotView.as_view(), name='api_chatbot'),
 
     # ── Araigogu AI Engine APIs ──────────────────────────
