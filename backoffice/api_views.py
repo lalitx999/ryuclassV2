@@ -268,10 +268,55 @@ class AdminPaymentReviewAPIView(APIView):
 class AdminCoursesAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def get(self, request, pk=None):
         if not is_staff_member(request.user):
             return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
         
+        if pk is not None:
+            try:
+                c = Course.objects.get(pk=pk)
+            except Course.DoesNotExist:
+                return Response({'error': 'ไม่พบคอร์สนี้'}, status=status.HTTP_404_NOT_FOUND)
+            
+            modules_qs = Module.objects.filter(course=c, is_active=True).order_by('sort_order')
+            modules_list = []
+            for m in modules_qs:
+                lessons_qs = Lesson.objects.filter(module=m, is_active=True).order_by('sort_order')
+                lessons_list = []
+                for l in lessons_qs:
+                    pdf_url = request.build_absolute_uri(l.pdf_file.url) if l.pdf_file else None
+                    lessons_list.append({
+                        'id': l.id,
+                        'title': l.title,
+                        'description': l.description or '',
+                        'duration': l.duration,
+                        'pdf_file': pdf_url,
+                        'pdf_title': l.pdf_title or '',
+                        'is_free': l.is_free,
+                        'sort_order': l.sort_order,
+                    })
+                modules_list.append({
+                    'id': m.id,
+                    'title': m.title,
+                    'sort_order': m.sort_order,
+                    'lessons': lessons_list
+                })
+
+            return Response({
+                'id': c.id,
+                'title': c.title,
+                'description': c.description or '',
+                'level': c.level,
+                'price': float(c.price),
+                'price_180': float(c.price_180) if c.price_180 else None,
+                'price_365': float(c.price_365) if c.price_365 else None,
+                'price_lifetime': float(c.price_lifetime) if c.price_lifetime else None,
+                'thumbnail': c.thumbnail or '',
+                'is_active': c.is_active,
+                'sort_order': c.sort_order,
+                'modules': modules_list
+            })
+
         courses = Course.objects.all().order_by('sort_order')
         results = []
         for c in courses:
@@ -349,7 +394,7 @@ class AdminCoursesAPIView(APIView):
         try:
             course = Course.objects.get(pk=pk)
         except Course.DoesNotExist:
-            return Response({'error': 'ไม่พบคอร์สนี้'}, status=404)
+            return Response({'error': 'ไม่พบคอร์สนี้'}, status=status.HTTP_404_NOT_FOUND)
 
         if 'title' in request.data:
             course.title = request.data.get('title')
@@ -368,8 +413,25 @@ class AdminCoursesAPIView(APIView):
         if 'price_lifetime' in request.data:
             p = request.data.get('price_lifetime')
             course.price_lifetime = Decimal(str(p)) if p else None
+        if 'is_active' in request.data:
+            course.is_active = str(request.data.get('is_active')).lower() in ('true', '1', 'yes')
+        if 'sort_order' in request.data:
+            try:
+                course.sort_order = int(request.data.get('sort_order'))
+            except (ValueError, TypeError):
+                pass
         course.save()
         return Response({'message': 'อัปเดตข้อมูลคอร์สเรียนเรียบร้อยแล้ว', 'id': course.id})
+
+    def delete(self, request, pk):
+        if not is_staff_member(request.user):
+            return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            course = Course.objects.get(pk=pk)
+            course.delete()
+            return Response({'message': 'ลบคอร์สเรียนเรียบร้อยแล้ว'})
+        except Course.DoesNotExist:
+            return Response({'error': 'ไม่พบคอร์สนี้'}, status=status.HTTP_404_NOT_FOUND)
 
 class AdminLessonDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
