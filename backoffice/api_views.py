@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework import status, parsers
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Max
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from django.http import HttpResponse
@@ -278,10 +278,10 @@ class AdminCoursesAPIView(APIView):
             except Course.DoesNotExist:
                 return Response({'error': 'ไม่พบคอร์สนี้'}, status=status.HTTP_404_NOT_FOUND)
             
-            modules_qs = Module.objects.filter(course=c, is_active=True).order_by('sort_order')
+            modules_qs = Module.objects.filter(course=c, is_active=True).order_by('sort_order', 'id')
             modules_list = []
             for m in modules_qs:
-                lessons_qs = Lesson.objects.filter(module=m, is_active=True).order_by('sort_order')
+                lessons_qs = Lesson.objects.filter(module=m, is_active=True).order_by('sort_order', 'id')
                 lessons_list = []
                 for l in lessons_qs:
                     pdf_url = request.build_absolute_uri(l.pdf_file.url) if l.pdf_file else None
@@ -317,13 +317,13 @@ class AdminCoursesAPIView(APIView):
                 'modules': modules_list
             })
 
-        courses = Course.objects.all().order_by('sort_order')
+        courses = Course.objects.all().order_by('sort_order', 'id')
         results = []
         for c in courses:
-            modules_qs = Module.objects.filter(course=c, is_active=True).order_by('sort_order')
+            modules_qs = Module.objects.filter(course=c, is_active=True).order_by('sort_order', 'id')
             modules_list = []
             for m in modules_qs:
-                lessons_qs = Lesson.objects.filter(module=m, is_active=True).order_by('sort_order')
+                lessons_qs = Lesson.objects.filter(module=m, is_active=True).order_by('sort_order', 'id')
                 lessons_list = []
                 for l in lessons_qs:
                     pdf_url = request.build_absolute_uri(l.pdf_file.url) if l.pdf_file else None
@@ -456,6 +456,21 @@ class AdminLessonDetailAPIView(APIView):
         course = Course.objects.get(pk=course_id)
         module = Module.objects.filter(pk=module_id).first() if module_id else None
 
+        raw_sort = request.data.get('sort_order')
+        so = None
+        if raw_sort is not None and str(raw_sort).strip() != '':
+            try:
+                so = int(raw_sort)
+            except (ValueError, TypeError):
+                so = None
+
+        if so is None:
+            qs = Lesson.objects.filter(course=course)
+            if module:
+                qs = qs.filter(module=module)
+            max_so = qs.aggregate(Max('sort_order'))['sort_order__max']
+            so = (max_so + 1) if (max_so is not None and max_so >= 0) else 1
+
         lesson = Lesson.objects.create(
             course=course,
             module=module,
@@ -463,7 +478,8 @@ class AdminLessonDetailAPIView(APIView):
             description=description,
             video_url=video_url,
             pdf_title=pdf_title,
-            is_free=is_free
+            is_free=is_free,
+            sort_order=so
         )
         if pdf_file:
             filename, _ = save_pdf_file(pdf_file, lesson.id)
@@ -537,8 +553,17 @@ class AdminModuleDetailAPIView(APIView):
         except Course.DoesNotExist:
             return Response({'error': 'ไม่พบคอร์สเรียนนี้'}, status=404)
 
-        last_sort = Module.objects.filter(course=course).count()
-        so = int(sort_order) if sort_order is not None else (last_sort + 1)
+        so = None
+        if sort_order is not None and str(sort_order).strip() != '':
+            try:
+                so = int(sort_order)
+            except (ValueError, TypeError):
+                so = None
+
+        if so is None:
+            max_so = Module.objects.filter(course=course).aggregate(Max('sort_order'))['sort_order__max']
+            so = (max_so + 1) if (max_so is not None and max_so >= 0) else 1
+
         module = Module.objects.create(
             course=course,
             title=title,
@@ -566,6 +591,38 @@ class AdminModuleDetailAPIView(APIView):
         module.save()
 
         return Response({'message': 'อัปเดตชื่อหมวดเรียบร้อยแล้ว', 'id': module.id, 'title': module.title})
+
+class AdminLessonReorderAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not is_staff_member(request.user):
+            return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
+
+        lesson_ids = request.data.get('lesson_ids', [])
+        if not lesson_ids or not isinstance(lesson_ids, list):
+            return Response({'error': 'กรุณาระบุ lesson_ids เป็น array'}, status=400)
+
+        for order, lesson_id in enumerate(lesson_ids, start=1):
+            Lesson.objects.filter(id=lesson_id).update(sort_order=order)
+
+        return Response({'message': 'จัดเรียงลำดับบทเรียนเรียบร้อยแล้ว'})
+
+class AdminModuleReorderAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not is_staff_member(request.user):
+            return Response({'error': 'เฉพาะผู้ดูแลระบบเท่านั้น'}, status=status.HTTP_403_FORBIDDEN)
+
+        module_ids = request.data.get('module_ids', [])
+        if not module_ids or not isinstance(module_ids, list):
+            return Response({'error': 'กรุณาระบุ module_ids เป็น array'}, status=400)
+
+        for order, module_id in enumerate(module_ids, start=1):
+            Module.objects.filter(id=module_id).update(sort_order=order)
+
+        return Response({'message': 'จัดเรียงลำดับหมวดเรียบร้อยแล้ว'})
 
 class AdminUsersAPIView(APIView):
     permission_classes = [IsAuthenticated]

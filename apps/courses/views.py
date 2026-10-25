@@ -144,11 +144,11 @@ class CourseDetailView(APIView):
         has_access = AccessService.has_video_access(user.id, course.level) if user else False
 
         # Fetch modules
-        modules = Module.objects.filter(course=course, is_active=True).order_by('sort_order')
+        modules = Module.objects.filter(course=course, is_active=True).order_by('sort_order', 'id')
         
         result_modules = []
         for module in modules:
-            lessons = Lesson.objects.filter(module=module, is_active=True).order_by('sort_order')
+            lessons = Lesson.objects.filter(module=module, is_active=True).order_by('sort_order', 'id')
             result_lessons = []
             
             for lesson in lessons:
